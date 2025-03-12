@@ -40,14 +40,21 @@ async function startServer() {
   app.get('/api/bots', async (req, res) => {
     try {
       const username = req.query.username;
-      let query = 'SELECT id, botName, username, points FROM bots';
+      let query = 'SELECT id AS id, "botName" AS botName, username AS username, points AS points FROM bots'; // Explicit column names
       let params = [];
       if (username) {
         query += ' WHERE username = $1';
         params.push(username);
       }
       const result = await client.query(query, params);
-      console.log('Fetched bots:', result.rows); // Debug: Log fetched bots
+      // Debug log with exact field names
+      const debugRows = result.rows.map(row => ({
+        id: row.id,
+        botName: row.botName, // Ensure correct field name
+        username: row.username,
+        points: row.points
+      }));
+      console.log('Fetched bots with fields:', debugRows);
       res.json(result.rows);
     } catch (err) {
       console.error('Error fetching bots:', err.stack);
