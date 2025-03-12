@@ -7,9 +7,9 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
-      background: #1e3c72; /* Match create-edit-bot.html */
+      background: #1e3c72;
       font-family: 'Arial', sans-serif;
-      color: #d4d4d4; /* Match text color */
+      color: #d4d4d4;
     }
     .container {
       padding: 40px;
@@ -119,6 +119,7 @@
         const response = await fetch('/api/bots');
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const bots = await response.json();
+        console.log('Fetched bots in view-bots:', bots); // Debug: Log fetched data
         const tbody = document.getElementById('bot-list');
         tbody.innerHTML = '';
         bots.sort((a, b) => (b.points || 0) - (a.points || 0)).forEach((bot, index) => {
