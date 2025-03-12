@@ -164,7 +164,7 @@
   <div class="container">
     <div class="button-row">
       <button class="btn" id="save-btn" onclick="saveBot()">Save</button>
-      <button class="btn" onclick="toggleEditMode()">Edit</button>
+      <button class="btn" id="edit-btn" onclick="toggleEditMode()">Edit</button>
       <input type="text" class="bot-name-input" value="(Bot name)" disabled>
       <input type="text" class="username-input" value="(Username)" disabled>
       <button class="btn" onclick="openBot()">Open</button>
@@ -229,6 +229,9 @@
           console.error('Error fetching bot:', error);
           showNotification('Failed to load bot. Check console.', 'error');
         }
+      } else {
+        // Auto-enable edit mode for new bots
+        toggleEditMode();
       }
     }
 
@@ -305,14 +308,14 @@
       console.log('username raw:', usernameInput.value);
       console.log('code raw:', code);
 
-      let botName = botNameInput.value.trim();
+      const botName = botNameInput.value.trim();
       const username = usernameInput.value.trim();
 
-      // Fallback for botName
+      // Validation
       if (!botName || botName === '(Bot name)') {
-        botName = 'Unnamed Bot';
+        showNotification('Please enter a valid bot name.', 'error');
+        return;
       }
-
       if (!username || username === '(Username)') {
         showNotification('Please enter a valid username.', 'error');
         return;
