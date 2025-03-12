@@ -42,21 +42,21 @@
       background-color: #444;
       cursor: not-allowed;
     }
-    .username-input, select, input[type="text"] {
+    .username-input {
       padding: 10px;
       font-size: 1.1em;
       border: none;
       min-width: 180px;
       text-align: center;
-      background-color: #add8e6; /* Light blue */
-      color: #ffffff; /* White text */
+      background-color: #2a5298;
+      color: #d4d4d4;
       border-radius: 10px;
       outline: none;
       transition: border-color 0.3s ease;
     }
-    .username-input:not([disabled]), select:not([disabled]), input[type="text"]:not([disabled]) {
+    .username-input:not([disabled]) {
       border: 2px solid #3a6bb8;
-      background-color: #add8e6;
+      background-color: #2e5a9e;
     }
     .code-editor {
       border: 1px solid #3a6bb8;
@@ -83,8 +83,8 @@
       border: none;
       resize: none;
       outline: none;
-      background: #1e3c72; /* Dark blue */
-      color: #add8e6; /* Light blue text */
+      background: #00ffff; /* Aqua background for code area */
+      color: #d4d4d4; /* Original text color */
       font-family: 'Consolas', monospace;
       line-height: 1.6;
       font-size: 1em;
@@ -154,7 +154,7 @@
     @media (max-width: 768px) {
       .button-row { flex-direction: column; align-items: center; }
       .code-editor { height: 350px; }
-      .btn, .username-input, select, input[type="text"] { font-size: 0.95rem; }
+      .btn, .username-input { font-size: 0.95rem; }
       .notification { top: 10px; right: 10px; }
     }
   </style>
@@ -171,12 +171,9 @@
         <option value="">Examples ▼</option>
         <option value="example: 1">Always Steal</option>
         <option value="example: 2">Always Stay</option>
-        <option value="example: 3">Random Choice</option>
-        <option value="example: 4">Steal First, Then Stay</option>
-        <option value="example: 5">Stay First, Then Steal</option>
-        <option value="example: 6">Steal on Even Rounds</option>
-        <option value="example: 7">Stay on Odd Rounds</option>
-        <option value="example: 8">Steal if Round is 1-5</option>
+        <option value="example: 3">Steal on Round 1</option>
+        <option value="example: 4">Stay on Round 1</option>
+        <option value="example: 5">Alternate Steal/Stay</option>
       </select>
       <button class="btn" onclick="deleteBot()">Delete</button>
       <div class="tooltip">
@@ -216,11 +213,11 @@
           const bot = await response.json();
           if (bot) {
             const usernameInput = document.querySelector('.username-input');
-            usernameInput.value = bot.botname || '(Username/Bot Name)'; // Use botname instead of username
+            usernameInput.value = bot.username || '(Username/Bot Name)';
             document.querySelector('#code-area').value = bot.code || '';
             updateLineNumbers();
             validateCode();
-            showNotification(`Loaded bot: ${bot.botname || 'Unnamed Bot'}`);
+            showNotification(`Loaded bot: ${bot.username || 'Unnamed Bot'}`);
           } else {
             showNotification('Bot not found.', 'error');
           }
@@ -229,6 +226,7 @@
           showNotification('Failed to load bot. Check console.', 'error');
         }
       } else {
+        // Auto-enable edit mode for new bots
         toggleEditMode();
       }
     }
@@ -253,11 +251,13 @@
         usernameInput.style.border = '2px solid #3a6bb8';
         codeArea.style.border = '2px solid #3a6bb8';
         usernameInput.focus();
+        // Clear placeholder text when entering edit mode
         if (usernameInput.value === '(Username/Bot Name)') usernameInput.value = '';
         editBtn.textContent = 'Done';
       } else {
         usernameInput.style.border = 'none';
         codeArea.style.border = 'none';
+        // Restore placeholder if empty
         if (!usernameInput.value.trim()) usernameInput.value = '(Username/Bot Name)';
         editBtn.textContent = 'Edit';
       }
@@ -276,7 +276,7 @@
             window.location.href = `/create-edit-bot.html?id=${bots[0].id}`;
           } else {
             const choice = prompt(`Multiple bots found for ${username}. Enter the exact Username/Bot Name to choose one:`);
-            const selectedBot = bots.find(bot => bot.botname === choice); // Use botname instead of username
+            const selectedBot = bots.find(bot => bot.username === choice);
             if (selectedBot) {
               window.location.href = `/create-edit-bot.html?id=${selectedBot.id}`;
             } else {
@@ -294,18 +294,20 @@
       const usernameInput = document.querySelector('.username-input');
       const code = document.querySelector('#code-area').value.trim();
 
+      // Debug: Log the raw values
       console.log('username raw:', usernameInput.value);
       console.log('code raw:', code);
 
-      const botName = usernameInput.value.trim(); // Use botname instead of username
+      const username = usernameInput.value.trim();
 
-      if (!botName || botName === '(Username/Bot Name)') {
+      // Validation
+      if (!username || username === '(Username/Bot Name)') {
         showNotification('Please enter a valid Username/Bot Name.', 'error');
         return;
       }
 
-      const botData = { botName, code }; // Use botName instead of username
-      console.log('botData to send:', botData);
+      const botData = { username, code };
+      console.log('botData to send:', botData); // Debug: Log the payload
 
       const url = currentBotId ? `/api/bots/${currentBotId}` : '/api/bots';
       const method = currentBotId ? 'PUT' : 'POST';
@@ -321,7 +323,7 @@
         const result = await response.json();
         if (response.ok) {
           currentBotId = result.id || currentBotId;
-          showNotification(`Bot ${currentBotId ? 'updated' : 'created'}! Saved as: ${botName}`, 'success');
+          showNotification(`Bot ${currentBotId ? 'updated' : 'created'}! Saved as: ${username}`, 'success');
           setTimeout(() => window.location.href = '/view-bots.html', 2000);
         } else {
           console.error('Server error:', result);
@@ -329,7 +331,7 @@
         }
       } catch (error) {
         console.error('Fetch error:', error.message, { url, method, botData });
-        showNotification(`Failed to save bot: ${error.message}. Check console.', 'error');
+        showNotification(`Failed to save bot: ${error.message}. Check console.`, 'error');
       } finally {
         document.getElementById('save-btn').disabled = false;
       }
@@ -373,7 +375,7 @@
       const results = [];
 
       for (let round = 1; round <= 20; round++) {
-        const opponentChoice = round % 2 === 1 ? 'steal' : 'stay'; // Simple opponent strategy
+        const opponentChoice = round % 2 === 1 ? 'steal' : 'stay'; // Simple opponent: steal on odd, stay on even
         const userResult = interpretBotCode(userBotCode, opponentHistory, round);
         if (userResult.error) return { error: userResult.error };
         const userChoice = userResult.decision;
@@ -406,6 +408,12 @@
           return { decision: trimmedLine.toLowerCase() };
         }
 
+        const percentageMatch = trimmedLine.match(/(\d+)% to (steal|stay)/i);
+        if (percentageMatch) {
+          const percent = parseInt(percentageMatch[1]) / 100;
+          return { decision: Math.random() < percent ? percentageMatch[2].toLowerCase() : (percentageMatch[2] === 'steal' ? 'stay' : 'steal') };
+        }
+
         const ifMatch = trimmedLine.match(/if (.+) then (.+)( else (.+))?/i);
         if (ifMatch) {
           const condition = ifMatch[1].trim();
@@ -413,10 +421,10 @@
           const elseAction = ifMatch[4] ? ifMatch[4].trim() : null;
 
           try {
-            if (evaluateCondition(condition, round)) {
-              return { decision: executeAction(action) };
+            if (evaluateCondition(condition, round, opponentHistory)) {
+              return { decision: executeAction(action, opponentHistory, round) };
             } else if (elseAction) {
-              return { decision: executeAction(elseAction) };
+              return interpretBotCode(elseAction, opponentHistory, round);
             }
           } catch (e) {
             return { error: `Error in line: "${line}": ${e.message}` };
@@ -426,18 +434,42 @@
       return { decision: Math.random() > 0.5 ? 'steal' : 'stay' };
     }
 
-    function evaluateCondition(condition, round) {
+    function evaluateCondition(condition, round, opponentHistory) {
+      const nestedIfMatch = condition.match(/(.+) then (.+)/i);
+      if (nestedIfMatch) {
+        const subCondition = nestedIfMatch[1].trim();
+        return evaluateCondition(subCondition, round, opponentHistory);
+      }
+
       const parts = condition.split(' ');
       const operator = parts[0];
-      const value = parseInt(parts.slice(1).join(' ')) || 0;
+      const value = parts.slice(1).join(' ');
 
-      if (operator === 'round') return round === value;
-      return false; // Default to false for unrecognized conditions
+      if (operator === 'round_number') return parseInt(value) === round;
+      if (operator === 'not') {
+        if (value === 'round_number 1') return round !== 1;
+        if (value === 'opponent_last_steal') return !(opponentHistory.length > 0 && opponentHistory[opponentHistory.length - 1] === 'steal');
+      }
+      if (operator === 'opponent_last_steal') return opponentHistory.length > 0 && opponentHistory[opponentHistory.length - 1] === 'steal';
+      if (operator === 'opponent_steal_count') {
+        const count = parseInt(value) || 0;
+        return opponentHistory.filter(c => c === 'steal').length >= count;
+      }
+      if (operator === 'random') {
+        const [min, max] = value.split('-').map(Number);
+        return Math.random() * (max - min) + min > 50;
+      }
+      throw new Error(`Invalid condition: "${condition}"`);
     }
 
-    function executeAction(action) {
+    function executeAction(action, opponentHistory, round) {
+      const percentageMatch = action.match(/(\d+)% to (steal|stay)/i);
+      if (percentageMatch) {
+        const percent = parseInt(percentageMatch[1]) / 100;
+        return Math.random() < percent ? percentageMatch[2].toLowerCase() : (percentageMatch[2] === 'steal' ? 'stay' : 'steal');
+      }
       if (['steal', 'stay'].includes(action.toLowerCase())) return action.toLowerCase();
-      return 'stay'; // Default to stay for unrecognized actions
+      return interpretBotCode(action, opponentHistory, round);
     }
 
     function showConsole(message) {
@@ -457,14 +489,11 @@
 
     function applyExample(example) {
       const codeMap = {
-        'example: 1': '// Always Steal\nsteal',
-        'example: 2': '// Always Stay\nstay',
-        'example: 3': '// Random Choice\nif round 1 then stay else steal',
-        'example: 4': '// Steal First, Then Stay\nif round 1 then steal else stay',
-        'example: 5': '// Stay First, Then Steal\nif round 1 then stay else steal',
-        'example: 6': '// Steal on Even Rounds\nif round 2 then steal else stay',
-        'example: 7': '// Stay on Odd Rounds\nif round 1 then stay else steal',
-        'example: 8': '// Steal if Round is 1-5\nif round 5 then steal else stay'
+        'example: 1': `steal`, // Always Steal
+        'example: 2': `stay`, // Always Stay
+        'example: 3': `if round_number 1 then steal else stay`, // Steal on Round 1
+        'example: 4': `if round_number 1 then stay else steal`, // Stay on Round 1
+        'example: 5': `if round_number 1 then steal else if round_number 2 then stay else if round_number 3 then steal else stay` // Alternate Steal/Stay
       };
       document.querySelector('#code-area').value = codeMap[example] || '';
       updateLineNumbers();
@@ -476,7 +505,7 @@
         'Welcome to the Bot Editor!\n\n' +
         '- Create/edit bots with unique strategies.\n' +
         '- Enter a Username/Bot Name to identify your bot.\n' +
-        '- Use commands like `steal`, `stay`, or `if round X then action`.\n' +
+        '- Use commands like `steal`, `stay`, `if`, or `random(0-100)`.\n' +
         '- Test your bot and save to compete!\n' +
         '- Delete bots from "My Bots" page.'
       );
@@ -487,8 +516,10 @@
         'Available Commands:\n' +
         '- `steal`: Always steal.\n' +
         '- `stay`: Always stay.\n' +
-        '- `if round X then action`: Do an action on round X (e.g., `if round 1 then steal`).\n' +
-        'Example: `if round 1 then steal else stay`'
+        '- `X% to steal/stay`: Random choice with X% probability.\n' +
+        '- `if condition then action [else action]`: Conditional logic.\n' +
+        '- Conditions: `round_number N`, `not round_number 1`, `opponent_last_steal`, `not opponent_last_steal`, `opponent_steal_count N`, `random 0-100`.\n' +
+        'Example: `if round_number 1 then steal else 50% to steal`'
       );
     }
 
@@ -499,8 +530,8 @@
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line && !line.startsWith('//')) {
-          if (!line.match(/^(steal|stay|if round \d+ then (steal|stay)( else (steal|stay))?)$/i)) {
-            errors.push(`Line ${i + 1}: Invalid syntax. Use 'steal', 'stay', or 'if round X then action [else action]'`);
+          if (!line.match(/^(steal|stay|\d+% to (steal|stay)|if .+ then .+( else .+)?)$/i)) {
+            errors.push(`Line ${i + 1}: Invalid syntax`);
           }
         }
       }
@@ -508,6 +539,7 @@
       else document.getElementById('console').style.display = 'none';
     }
 
+    // Auto-save every 10 seconds
     function autoSave() {
       if (editMode && currentBotId) {
         clearTimeout(autoSaveTimeout);
@@ -520,6 +552,7 @@
     updateLineNumbers();
     validateCode();
 
+    // Debug: Log when the page loads
     console.log('create-edit-bot.html loaded successfully at:', window.location.href);
   </script>
 </body>
