@@ -158,7 +158,6 @@
           <li><a class="dropdown-item" href="#" onclick="loadExample('steal')">Always Steal</a></li>
           <li><a class="dropdown-item" href="#" onclick="loadExample('stay')">Always Stay</a></li>
           <li><a class="dropdown-item" href="#" onclick="loadExample('random')">Random Choice (70% Steal)</a></li>
-          <li><a class="dropdown-item" href="#" onclick="loadExample('copyOpponent')">Copy Opponent (If Steal)</a></li>
           <li><a class="dropdown-item" href="#" onclick="loadExample('roundCondition')">Round 1 Steal, Else Stay</a></li>
           <li><a class="dropdown-item" href="#" onclick="loadExample('stealIfOften')">Steal If Opponent Steals Often</a></li>
           <li><a class="dropdown-item" href="#" onclick="loadExample('randomHigh')">Random High Chance Steal</a></li>
@@ -253,6 +252,7 @@
 
       const botData = { botName, username, code: botCode };
       try {
+        console.log('Sending save request to:', currentBotId ? `/api/bots/${currentBotId}` : '/api/bots', 'with data:', botData);
         const url = currentBotId ? `/api/bots/${currentBotId}` : '/api/bots';
         const method = currentBotId ? 'PUT' : 'POST';
         const response = await fetch(url, {
@@ -261,13 +261,13 @@
           body: JSON.stringify(botData)
         });
         const result = await response.json();
-        console.log('Save result:', result);
+        console.log('Save response:', result);
         if (response.ok) {
           showNotification('Bot saved successfully!', 'success');
           currentBotId = result.id || currentBotId;
           populateBots();
         } else {
-          showNotification(`Failed to save bot: ${result.error}`, 'error');
+          showNotification(`Failed to save bot: ${result.error || 'Unknown error'}`, 'error');
         }
       } catch (error) {
         console.error('Error saving bot:', error);
@@ -325,9 +325,6 @@
         case 'random':
           document.getElementById('bot-code').value = '70% to steal';
           break;
-        case 'copyOpponent':
-          document.getElementById('bot-code').value = 'if opponent_last_steal then steal\nelse stay';
-          break;
         case 'roundCondition':
           document.getElementById('bot-code').value = 'if round_number 1 then steal\nelse stay';
           break;
@@ -364,12 +361,11 @@
         '1. `steal` - Always steal every round.\n' +
         '2. `stay` - Always stay every round.\n' +
         '3. `70% to steal` - 70% chance to steal, 30% to stay.\n' +
-        '4. `if opponent_last_steal then steal\nelse stay` - Steal if opponent stole last, else stay.\n' +
-        '5. `if round_number 1 then steal\nelse stay` - Steal on round 1, stay otherwise.\n' +
-        '6. `if opponent_steal_count 5 then steal\nelse stay` - Steal if opponent stole 5+ times, else stay.\n' +
-        '7. `if random 0-100 > 80 then steal\nelse stay` - Steal if random number (0-100) is greater than 80, else stay.\n' +
-        '8. `if not opponent_last_steal then stay\nelse steal` - Stay if opponent didn’t steal last, else steal.\n' +
-        '9. `if round_number 1 then stay\nelse if opponent_steal_count 3 then if random 0-100 > 10 then steal else stay\nelse if opponent_last_steal then steal\nelse stay` - Adaptive tit-for-tat: Cooperate first, retaliate if opponent steals, punish if they steal often (90% steal), with 10% random steal chance.'
+        '4. `if round_number 1 then steal\nelse stay` - Steal on round 1, stay otherwise.\n' +
+        '5. `if opponent_steal_count 5 then steal\nelse stay` - Steal if opponent stole 5+ times, else stay.\n' +
+        '6. `if random 0-100 > 80 then steal\nelse stay` - Steal if random number (0-100) is greater than 80, else stay.\n' +
+        '7. `if not opponent_last_steal then stay\nelse steal` - Stay if opponent didn’t steal last, else steal.\n' +
+        '8. `if round_number 1 then stay\nelse if opponent_steal_count 3 then if random 0-100 > 10 then steal else stay\nelse if opponent_last_steal then steal\nelse stay` - Adaptive tit-for-tat: Cooperate first, retaliate if opponent steals, punish if they steal often (90% steal), with 10% random steal chance.'
       );
     }
 
@@ -386,7 +382,7 @@
         if (line && !line.startsWith('//')) {
           // Match 'if' statements with optional arithmetic in conditions
           if (line.startsWith('if ') || line.startsWith('else if ')) {
-            // Updated regex to support arithmetic expressions in conditions
+            // Adjusted regex to handle simpler conditions like 'opponent_last_steal'
             if (!line.match(/^((else )?if) (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( (>|<) (\d+|\d+\s*\*\s*\(round_number\s*-\s*\d+\))?)?) then (steal|stay|\d+% to (steal|stay))$/i)) {
               errors.push(`Line ${i + 1}: Invalid if statement syntax`);
             } else {
