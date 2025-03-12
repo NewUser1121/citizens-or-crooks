@@ -165,8 +165,8 @@
     <div class="button-row">
       <button class="btn" id="save-btn" onclick="saveBot()">Save</button>
       <button class="btn" onclick="toggleEditMode()">Edit</button>
-      <div class="bot-name-input" contenteditable="false">(Bot name)</div>
-      <div class="username-input" contenteditable="false">(Username)</div>
+      <input type="text" class="bot-name-input" value="(Bot name)" disabled>
+      <input type="text" class="username-input" value="(Username)" disabled>
       <button class="btn" onclick="openBot()">Open</button>
       <button class="btn" onclick="testBot()">Test</button>
       <select class="form-control examples-dropdown" onchange="applyExample(this.value)">
@@ -214,8 +214,8 @@
           if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
           const bot = await response.json();
           if (bot) {
-            document.querySelector('.bot-name-input').textContent = bot.botName || '(Bot name)';
-            document.querySelector('.username-input').textContent = bot.username || '(Username)';
+            document.querySelector('.bot-name-input').value = bot.botName || '(Bot name)';
+            document.querySelector('.username-input').value = bot.username || '(Username)';
             document.querySelector('#code-area').value = bot.code || '';
             updateLineNumbers();
             validateCode();
@@ -243,8 +243,8 @@
       const usernameInput = document.querySelector('.username-input');
       const codeArea = document.querySelector('#code-area');
 
-      botNameInput.contentEditable = editMode;
-      usernameInput.contentEditable = editMode;
+      botNameInput.disabled = !editMode;
+      usernameInput.disabled = !editMode;
       codeArea.readOnly = !editMode;
 
       if (editMode) {
@@ -252,23 +252,6 @@
         usernameInput.style.border = '2px solid #3a6bb8';
         codeArea.style.border = '2px solid #3a6bb8';
         botNameInput.focus();
-        const range = document.createRange();
-        range.selectNodeContents(botNameInput);
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-
-        botNameInput.addEventListener('keydown', function onEnter(event) {
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            usernameInput.focus();
-            const range2 = document.createRange();
-            range2.selectNodeContents(usernameInput);
-            selection.removeAllRanges();
-            selection.addRange(range2);
-            botNameInput.removeEventListener('keydown', onEnter);
-          }
-        }, { once: true });
       } else {
         botNameInput.style.border = 'none';
         usernameInput.style.border = 'none';
@@ -288,9 +271,9 @@
           } else if (bots.length === 1) {
             window.location.href = `/create-edit-bot.html?id=${bots[0].id}`;
           } else {
-            const botNames = bots.map(bot => bot.botName).join(', ');
+            const botNames = bots.map(bot => bot.botName || 'Unnamed').join(', ');
             const choice = prompt(`Choose a bot: ${botNames}`);
-            const selectedBot = bots.find(bot => bot.botName === choice);
+            const selectedBot = bots.find(bot => (bot.botName || 'Unnamed') === choice);
             if (selectedBot) {
               window.location.href = `/create-edit-bot.html?id=${selectedBot.id}`;
             } else {
@@ -309,14 +292,12 @@
       const usernameInput = document.querySelector('.username-input');
       const code = document.querySelector('#code-area').value.trim();
 
-      // Debug: Log the raw and trimmed values
-      console.log('botName raw:', botNameInput.textContent);
-      console.log('botName trimmed:', botNameInput.textContent.trim());
-      console.log('username raw:', usernameInput.textContent);
-      console.log('username trimmed:', usernameInput.textContent.trim());
+      // Debug: Log the raw and value
+      console.log('botName raw:', botNameInput.value);
+      console.log('username raw:', usernameInput.value);
 
-      const botName = botNameInput.textContent.trim();
-      const username = usernameInput.textContent.trim();
+      const botName = botNameInput.value.trim() || 'Unnamed Bot';
+      const username = usernameInput.value.trim();
 
       if (!botName || !username || botName === '(Bot name)' || username === '(Username)' || botName === '' || username === '') {
         showNotification('Please enter valid bot name and username (no empty values).', 'error');
