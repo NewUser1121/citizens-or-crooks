@@ -36,17 +36,40 @@ async function startServer() {
   }
 
   // API Routes
-  // Get all bots
+  // Get all bots or filter by username
   app.get('/api/bots', async (req, res) => {
     try {
-      const result = await client.query('SELECT id, botName, username, points FROM bots');
+      const username = req.query.username;
+      let query = 'SELECT id, botName, username, points FROM bots';
+      let params = [];
+      if (username) {
+        query += ' WHERE username = $1';
+        params.push(username);
+      }
+      const result = await client.query(query, params);
       res.json(result.rows);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      console.error('Error fetching bots:', err.stack);
+      res.status(500).json({ error: 'Failed to fetch bots', details: err.message });
     }
   });
 
-  // Add a new bot
+  // Get a specific bot by ID
+  app.get('/api/bots/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await client.query('SELECT * FROM bots WHERE id = $1', [id]);
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Bot not found' });
+      }
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error('Error fetching bot:', err.stack);
+      res.status(500).json({ error: 'Failed to fetch bot', details: err.message });
+    }
+  });
+
+  // Create a new bot
   app.post('/api/bots', async (req, res) => {
     const { botName, username, code } = req.body;
     if (!botName || !username) {
@@ -57,10 +80,50 @@ async function startServer() {
         'INSERT INTO bots (botName, username, code) VALUES ($1, $2, $3) RETURNING *',
         [botName, username, code || '']
       );
+      console.log('Bot created successfully:', result.rows[0]);
       res.status(201).json(result.rows[0]);
     } catch (err) {
-      console.error('Error saving bot:', err.stack);
-      res.status(500).json({ error: 'Failed to save bot' });
+      console.error('Error creating bot:', err.stack);
+      res.status(500).json({ error: 'Failed to create bot', details: err.message });
+    }
+  });
+
+  // Update an existing bot
+  app.put('/api/bots/:id', async (req, res) => {
+    const { id } = req.params;
+    const { botName, username, code } = req.body;
+    if (!botName || !username) {
+      return res.status(400).json({ error: 'botName and username are required' });
+    }
+    try {
+      const result = await client.query(
+        'UPDATE bots SET botName = $1, username = $2, code = $3 WHERE id = $4 RETURNING *',
+        [botName, username, code || '', id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Bot not found' });
+      }
+      console.log('Bot updated successfully:', result.rows[0]);
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error('Error updating bot:', err.stack);
+      res.status(500).json({ error: 'Failed to update bot', details: err.message });
+    }
+  });
+
+  // Delete a bot
+  app.delete('/api/bots/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await client.query('DELETE FROM bots WHERE id = $1 RETURNING *', [id]);
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Bot not found' });
+      }
+      console.log('Bot deleted successfully:', result.rows[0]);
+      res.json({ message: 'Bot deleted successfully' });
+    } catch (err) {
+      console.error('Error deleting bot:', err.stack);
+      res.status(500).json({ error: 'Failed to delete bot', details: err.message });
     }
   });
 
@@ -71,7 +134,7 @@ async function startServer() {
       const bot1 = await client.query('SELECT * FROM bots WHERE id = $1', [bot1Id]);
       const bot2 = await client.query('SELECT * FROM bots WHERE id = $1', [bot2Id]);
       if (bot1.rows.length === 0 || bot2.rows.length === 0) {
-        return res.json({ error: 'Bot not found' });
+        return res.status(404).json({ error: 'Bot not found' });
       }
 
       const bot1Data = bot1.rows[0];
@@ -102,11 +165,12 @@ async function startServer() {
       await client.query('UPDATE bots SET points = $1 WHERE id = $2', [bot2Points, bot2Id]);
       res.json({ results, bot1Points, bot2Points });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      console.error('Error playing game:', err.stack);
+      res.status(500).json({ error: 'Failed to play game', details: err.message });
     }
   });
 
-  // Default route to serve index.html (homepage)
+  // Default route to serve index.html
   app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
   });
