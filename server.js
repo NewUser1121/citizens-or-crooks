@@ -72,8 +72,9 @@ async function startServer() {
   // Create a new bot
   app.post('/api/bots', async (req, res) => {
     const { botName, username, code } = req.body;
-    if (!botName || !username) {
-      return res.status(400).json({ error: 'botName and username are required' });
+    console.log('Received bot data:', { botName, username, code }); // Debug log
+    if (!botName || !username || typeof botName !== 'string' || typeof username !== 'string') {
+      return res.status(400).json({ error: 'botName and username must be non-empty strings' });
     }
     try {
       const result = await client.query(
@@ -92,8 +93,9 @@ async function startServer() {
   app.put('/api/bots/:id', async (req, res) => {
     const { id } = req.params;
     const { botName, username, code } = req.body;
-    if (!botName || !username) {
-      return res.status(400).json({ error: 'botName and username are required' });
+    console.log('Received update data:', { id, botName, username, code }); // Debug log
+    if (!botName || !username || typeof botName !== 'string' || typeof username !== 'string') {
+      return res.status(400).json({ error: 'botName and username must be non-empty strings' });
     }
     try {
       const result = await client.query(
@@ -124,6 +126,18 @@ async function startServer() {
     } catch (err) {
       console.error('Error deleting bot:', err.stack);
       res.status(500).json({ error: 'Failed to delete bot', details: err.message });
+    }
+  });
+
+  // Reset leaderboard
+  app.post('/api/reset-leaderboard', async (req, res) => {
+    try {
+      await client.query('TRUNCATE TABLE bots RESTART IDENTITY');
+      console.log('Leaderboard reset successfully');
+      res.json({ success: true });
+    } catch (err) {
+      console.error('Error resetting leaderboard:', err.stack);
+      res.status(500).json({ success: false, error: 'Failed to reset leaderboard', details: err.message });
     }
   });
 
