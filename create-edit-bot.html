@@ -19,13 +19,6 @@
       max-width: 1000px;
       width: 100%;
     }
-    .input-section {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-      margin-bottom: 25px;
-      justify-content: center;
-    }
     .button-row {
       display: flex;
       flex-wrap: wrap;
@@ -49,7 +42,7 @@
       background-color: #444;
       cursor: not-allowed;
     }
-    .username-input, select, input[type="text"] {
+    select, input[type="text"] {
       padding: 10px;
       font-size: 1.1em;
       border: none;
@@ -61,7 +54,7 @@
       outline: none;
       transition: border-color 0.3s ease;
     }
-    .username-input:not([disabled]), select:not([disabled]), input[type="text"]:not([disabled]) {
+    select:not([disabled]), input[type="text"]:not([disabled]) {
       border: 2px solid #3a6bb8;
       background-color: #add8e6; /* Light blue */
     }
@@ -160,37 +153,27 @@
     }
     @media (max-width: 768px) {
       .button-row { flex-direction: column; align-items: center; }
-      .input-section { flex-direction: column; align-items: center; }
       .code-editor { height: 350px; }
-      .btn, .username-input, select, input[type="text"] { font-size: 0.95rem; }
+      .btn, select, input[type="text"] { font-size: 0.95rem; }
       .notification { top: 10px; right: 10px; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="input-section">
-      <input type="text" class="username-input" id="username" placeholder="Enter Username" disabled>
-      <select id="bot-select" class="form-control" onchange="loadBot()" disabled>
-        <option value="">Choose a bot...</option>
-      </select>
-      <input type="text" id="bot-name" class="username-input" placeholder="Enter Bot Name" disabled>
-    </div>
     <div class="button-row">
       <button class="btn" id="save-btn" onclick="saveBot()">Save</button>
       <button class="btn" id="edit-btn" onclick="toggleEditMode()">Edit</button>
+      <input type="text" class="username-input" value="(Username/Bot Name)" disabled>
       <button class="btn" onclick="openBot()">Open</button>
-      <button class="btn" id="test-btn" onclick="testBot()">Test</button>
+      <button class="btn" onclick="testBot()">Test</button>
       <select class="form-control examples-dropdown" onchange="applyExample(this.value)">
         <option value="">Examples ▼</option>
-        <option value="steal">Always Steal</option>
-        <option value="stay">Always Stay</option>
-        <option value="random">Random Choice</option>
-        <option value="firstSteal">Steal First, Then Stay</option>
-        <option value="stayFirst">Stay First, Then Steal</option>
-        <option value="evenSteal">Steal on Even Rounds</option>
-        <option value="oddStay">Stay on Odd Rounds</option>
-        <option value="stealIfEarly">Steal if Round is 1-5</option>
+        <option value="example: 1">example: 1</option>
+        <option value="example: 2">example: 2</option>
+        <option value="example: 3">example: 3</option>
+        <option value="example: 4">example: 4</option>
+        <option value="example: 5">example: 5</option>
       </select>
       <button class="btn" onclick="deleteBot()">Delete</button>
       <div class="tooltip">
@@ -229,12 +212,11 @@
           if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
           const bot = await response.json();
           if (bot) {
-            document.querySelector('#username').value = bot.username || '';
-            document.querySelector('#bot-name').value = bot.botname || '';
+            const usernameInput = document.querySelector('.username-input');
+            usernameInput.value = bot.username || '(Username/Bot Name)';
             document.querySelector('#code-area').value = bot.code || '';
             updateLineNumbers();
             validateCode();
-            populateBots(); // Load bot options
             showNotification(`Loaded bot: ${bot.username || 'Unnamed Bot'}`);
           } else {
             showNotification('Bot not found.', 'error');
@@ -258,77 +240,31 @@
 
     function toggleEditMode() {
       editMode = !editMode;
-      const usernameInput = document.querySelector('#username');
-      const botNameInput = document.querySelector('#bot-name');
-      const botSelect = document.querySelector('#bot-select');
+      const usernameInput = document.querySelector('.username-input');
       const codeArea = document.querySelector('#code-area');
       const editBtn = document.getElementById('edit-btn');
 
       usernameInput.disabled = !editMode;
-      botNameInput.disabled = !editMode;
-      botSelect.disabled = !editMode;
       codeArea.readOnly = !editMode;
 
       if (editMode) {
         usernameInput.style.border = '2px solid #3a6bb8';
-        botNameInput.style.border = '2px solid #3a6bb8';
-        botSelect.style.border = '2px solid #3a6bb8';
         codeArea.style.border = '2px solid #3a6bb8';
         usernameInput.focus();
+        // Clear placeholder text when entering edit mode
+        if (usernameInput.value === '(Username/Bot Name)') usernameInput.value = '';
         editBtn.textContent = 'Done';
       } else {
         usernameInput.style.border = 'none';
-        botNameInput.style.border = 'none';
-        botSelect.style.border = 'none';
         codeArea.style.border = 'none';
+        // Restore placeholder if empty
+        if (!usernameInput.value.trim()) usernameInput.value = '(Username/Bot Name)';
         editBtn.textContent = 'Edit';
       }
     }
 
-    async function populateBots() {
-      const username = document.getElementById('username').value.trim();
-      if (!username) {
-        document.getElementById('bot-select').innerHTML = '<option value="">Choose a bot...</option>';
-        return;
-      }
-      try {
-        const response = await fetch(`/api/bots?username=${encodeURIComponent(username)}`);
-        const bots = await response.json();
-        const botSelect = document.getElementById('bot-select');
-        botSelect.innerHTML = '<option value="">Choose a bot...</option>';
-        bots.forEach(bot => {
-          const option = document.createElement('option');
-          option.value = bot.id;
-          option.textContent = bot.botname || 'Unnamed Bot';
-          botSelect.appendChild(option);
-        });
-      } catch (error) {
-        console.error('Error fetching bots:', error);
-        showNotification('Failed to load bots. Check console.', 'error');
-      }
-    }
-
-    async function loadBot() {
-      const botSelect = document.getElementById('bot-select');
-      currentBotId = botSelect.value;
-      if (!currentBotId) return;
-
-      try {
-        const response = await fetch(`/api/bots/${currentBotId}`);
-        const bot = await response.json();
-        document.getElementById('username').value = bot.username || '';
-        document.getElementById('bot-name').value = bot.botname || '';
-        document.getElementById('code-area').value = bot.code || '';
-        updateLineNumbers();
-        validateCode();
-      } catch (error) {
-        console.error('Error loading bot:', error);
-        showNotification('Failed to load bot. Check console.', 'error');
-      }
-    }
-
     async function openBot() {
-      const username = prompt('Enter Username:');
+      const username = prompt('Enter Username/Bot Name:');
       if (username) {
         try {
           const response = await fetch(`/api/bots?username=${encodeURIComponent(username)}`);
@@ -339,8 +275,8 @@
           } else if (bots.length === 1) {
             window.location.href = `/create-edit-bot.html?id=${bots[0].id}`;
           } else {
-            const choice = prompt(`Multiple bots found for ${username}. Enter the exact Bot Name to choose one:`);
-            const selectedBot = bots.find(bot => bot.botname === choice);
+            const choice = prompt(`Multiple bots found for ${username}. Enter the exact Username/Bot Name to choose one:`);
+            const selectedBot = bots.find(bot => bot.username === choice);
             if (selectedBot) {
               window.location.href = `/create-edit-bot.html?id=${selectedBot.id}`;
             } else {
@@ -355,17 +291,22 @@
     }
 
     async function saveBot() {
-      const username = document.querySelector('#username').value.trim();
-      const botName = document.querySelector('#bot-name').value.trim();
+      const usernameInput = document.querySelector('.username-input');
       const code = document.querySelector('#code-area').value.trim();
 
+      // Debug: Log the raw values
+      console.log('username raw:', usernameInput.value);
+      console.log('code raw:', code);
+
+      const username = usernameInput.value.trim();
+
       // Validation
-      if (!username || !botName) {
-        showNotification('Please enter a valid Username and Bot Name.', 'error');
+      if (!username || username === '(Username/Bot Name)') {
+        showNotification('Please enter a valid Username/Bot Name.', 'error');
         return;
       }
 
-      const botData = { username, botName, code };
+      const botData = { username, code };
       console.log('botData to send:', botData); // Debug: Log the payload
 
       const url = currentBotId ? `/api/bots/${currentBotId}` : '/api/bots';
@@ -382,7 +323,7 @@
         const result = await response.json();
         if (response.ok) {
           currentBotId = result.id || currentBotId;
-          showNotification(`Bot ${currentBotId ? 'updated' : 'created'}! Saved as: ${botName}`, 'success');
+          showNotification(`Bot ${currentBotId ? 'updated' : 'created'}! Saved as: ${username}`, 'success');
           setTimeout(() => window.location.href = '/view-bots.html', 2000);
         } else {
           console.error('Server error:', result);
@@ -390,7 +331,7 @@
         }
       } catch (error) {
         console.error('Fetch error:', error.message, { url, method, botData });
-        showNotification(`Failed to save bot: ${error.message}. Check console.', 'error');
+        showNotification(`Failed to save bot: ${error.message}. Check console.`, 'error');
       } finally {
         document.getElementById('save-btn').disabled = false;
       }
@@ -434,7 +375,7 @@
       const results = [];
 
       for (let round = 1; round <= 20; round++) {
-        const opponentChoice = round % 2 === 1 ? 'steal' : 'stay'; // Simple alternating opponent
+        const opponentChoice = round % 2 === 1 ? 'steal' : 'stay'; // Simple opponent: steal on odd, stay on even
         const userResult = interpretBotCode(userBotCode, opponentHistory, round);
         if (userResult.error) return { error: userResult.error };
         const userChoice = userResult.decision;
@@ -467,6 +408,12 @@
           return { decision: trimmedLine.toLowerCase() };
         }
 
+        const percentageMatch = trimmedLine.match(/(\d+)% to (steal|stay)/i);
+        if (percentageMatch) {
+          const percent = parseInt(percentageMatch[1]) / 100;
+          return { decision: Math.random() < percent ? percentageMatch[2].toLowerCase() : (percentageMatch[2] === 'steal' ? 'stay' : 'steal') };
+        }
+
         const ifMatch = trimmedLine.match(/if (.+) then (.+)( else (.+))?/i);
         if (ifMatch) {
           const condition = ifMatch[1].trim();
@@ -477,7 +424,7 @@
             if (evaluateCondition(condition, round, opponentHistory)) {
               return { decision: executeAction(action, opponentHistory, round) };
             } else if (elseAction) {
-              return { decision: executeAction(elseAction, opponentHistory, round) };
+              return interpretBotCode(elseAction, opponentHistory, round);
             }
           } catch (e) {
             return { error: `Error in line: "${line}": ${e.message}` };
@@ -488,20 +435,41 @@
     }
 
     function evaluateCondition(condition, round, opponentHistory) {
+      const nestedIfMatch = condition.match(/(.+) then (.+)/i);
+      if (nestedIfMatch) {
+        const subCondition = nestedIfMatch[1].trim();
+        return evaluateCondition(subCondition, round, opponentHistory);
+      }
+
       const parts = condition.split(' ');
       const operator = parts[0];
       const value = parts.slice(1).join(' ');
 
-      if (operator === 'round') return parseInt(value) === round;
+      if (operator === 'round_number') return parseInt(value) === round;
       if (operator === 'not') {
-        if (value === 'round 1') return round !== 1;
+        if (value === 'round_number 1') return round !== 1;
+        if (value === 'opponent_last_steal') return !(opponentHistory.length > 0 && opponentHistory[opponentHistory.length - 1] === 'steal');
+      }
+      if (operator === 'opponent_last_steal') return opponentHistory.length > 0 && opponentHistory[opponentHistory.length - 1] === 'steal';
+      if (operator === 'opponent_steal_count') {
+        const count = parseInt(value) || 0;
+        return opponentHistory.filter(c => c === 'steal').length >= count;
+      }
+      if (operator === 'random') {
+        const [min, max] = value.split('-').map(Number);
+        return Math.random() * (max - min) + min > 50;
       }
       throw new Error(`Invalid condition: "${condition}"`);
     }
 
     function executeAction(action, opponentHistory, round) {
+      const percentageMatch = action.match(/(\d+)% to (steal|stay)/i);
+      if (percentageMatch) {
+        const percent = parseInt(percentageMatch[1]) / 100;
+        return Math.random() < percent ? percentageMatch[2].toLowerCase() : (percentageMatch[2] === 'steal' ? 'stay' : 'steal');
+      }
       if (['steal', 'stay'].includes(action.toLowerCase())) return action.toLowerCase();
-      return action; // Fallback to original behavior
+      return interpretBotCode(action, opponentHistory, round);
     }
 
     function showConsole(message) {
@@ -521,14 +489,11 @@
 
     function applyExample(example) {
       const codeMap = {
-        'steal': 'steal',
-        'stay': 'stay',
-        'random': 'if round 1 then steal else stay',
-        'firstSteal': 'if round 1 then steal else stay',
-        'stayFirst': 'if round 1 then stay else steal',
-        'evenSteal': 'if round 2 then steal else stay',
-        'oddStay': 'if round 1 then stay else steal',
-        'stealIfEarly': 'if round 5 then steal else stay'
+        'example: 1': `// 50% steal on round 1\nif round_number 1 then 50% to steal\n// Steal if opponent stole last\nif not opponent_last_steal then stay else steal`,
+        'example: 2': `// Always stay\nstay`,
+        'example: 3': `// Steal on round 1, then react\nif round_number 1 then steal\nif not round_number 1 then if opponent_last_steal then steal else stay`,
+        'example: 4': `// 70% steal on round 1, 30% if opponent stole 2+ times\nif round_number 1 then 70% to steal\nif opponent_steal_count 2 then 30% to steal else stay`,
+        'example: 5': `// Random strategy\nif random 0-100 then steal else stay`
       };
       document.querySelector('#code-area').value = codeMap[example] || '';
       updateLineNumbers();
@@ -551,8 +516,10 @@
         'Available Commands:\n' +
         '- `steal`: Always steal.\n' +
         '- `stay`: Always stay.\n' +
-        '- `if round N then action else action`: Choose based on round number.\n' +
-        'Example: `if round 1 then steal else stay`'
+        '- `X% to steal/stay`: Random choice with X% probability.\n' +
+        '- `if condition then action [else action]`: Conditional logic.\n' +
+        '- Conditions: `round_number N`, `not round_number 1`, `opponent_last_steal`, `not opponent_last_steal`, `opponent_steal_count N`, `random 0-100`.\n' +
+        'Example: `if round_number 1 then steal else 50% to steal`'
       );
     }
 
@@ -563,7 +530,7 @@
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line && !line.startsWith('//')) {
-          if (!line.match(/^(steal|stay|if round \d+ then (steal|stay)( else (steal|stay))?)$/i)) {
+          if (!line.match(/^(steal|stay|\d+% to (steal|stay)|if .+ then .+( else .+)?)$/i)) {
             errors.push(`Line ${i + 1}: Invalid syntax`);
           }
         }
