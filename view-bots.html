@@ -123,7 +123,7 @@
         tbody.innerHTML = '';
         bots.sort((a, b) => (b.points || 0) - (a.points || 0)).forEach((bot, index) => {
           const prize = index === 0 ? '$100' : index === 1 ? '$50' : index === 2 ? '$25' : '';
-          const botName = bot.botName !== undefined ? bot.botName : (bot.botname || 'Unnamed Bot');
+          const botName = bot.botname !== undefined ? bot.botname : 'Unnamed Bot'; // Use lowercase botname
           console.log(`Bot ${bot.id} name for display:`, botName); // Debug
           const row = document.createElement('tr');
           row.innerHTML = `
