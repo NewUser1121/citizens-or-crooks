@@ -317,13 +317,13 @@
     function loadExample(example) {
       switch (example) {
         case 'steal':
-          document.getElementById('bot-code').value = 'steal;';
+          document.getElementById('bot-code').value = 'steal'; // Removed semicolon
           break;
         case 'stay':
-          document.getElementById('bot-code').value = 'stay;';
+          document.getElementById('bot-code').value = 'stay'; // Removed semicolon
           break;
         case 'random':
-          document.getElementById('bot-code').value = '70% to steal;';
+          document.getElementById('bot-code').value = '70% to steal'; // Removed semicolon
           break;
         case 'copyOpponent':
           document.getElementById('bot-code').value = 'if opponent_last_steal then steal\nelse stay;';
@@ -359,12 +359,12 @@
         '- Conditions: `round_number N` (e.g., round_number 1 for round 1), `not round_number N` (e.g., not round_number 1 for not round 1),\n' +
         '  `opponent_last_steal` (if opponent stole last time), `not opponent_last_steal` (if opponent didn’t steal last time),\n' +
         '  `opponent_steal_count N` (e.g., opponent_steal_count 5 if opponent stole 5+ times), `random 0-100` (random number 0-100).\n' +
-        '- Actions: `steal`, `stay`, or `X% to steal/stay`.\n' +
-        '- End a block with `;` to separate multiple if statements.\n' +
+        '- Actions: `steal`, `stay`, `X% to steal/stay`, or a nested `if` statement.\n' +
+        '- End a block with `;` to separate multiple if statements (optional for single-line commands).\n' +
         'Examples:\n' +
-        '1. `steal;` - Always steal every round.\n' +
-        '2. `stay;` - Always stay every round.\n' +
-        '3. `70% to steal;` - 70% chance to steal, 30% to stay.\n' +
+        '1. `steal` - Always steal every round.\n' +
+        '2. `stay` - Always stay every round.\n' +
+        '3. `70% to steal` - 70% chance to steal, 30% to stay.\n' +
         '4. `if opponent_last_steal then steal\nelse stay;` - Steal if opponent stole last, else stay.\n' +
         '5. `if round_number 1 then steal\nelse stay;` - Steal on round 1, stay otherwise.\n' +
         '6. `if opponent_steal_count 5 then steal\nelse stay;` - Steal if opponent stole 5+ times, else stay.\n' +
@@ -403,15 +403,24 @@
 
               if (currentLine.startsWith('if ') || currentLine.startsWith('else if ')) {
                 hasIf = true;
-                const ifPattern = /^((if|else if) (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?)$/i;
+                // Updated pattern to allow nested if as a then action
+                const ifPattern = /^((if|else if) (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay)|(if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?))( else (steal|stay|\d+% to (steal|stay)))?)$/i;
                 if (!currentLine.match(ifPattern)) {
                   errors.push(`Line ${lineNum}: Invalid if/else if statement syntax`);
                   validBlock = false;
                 } else {
                   const condition = currentLine.match(/(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?)/)[0];
-                  const thenAction = currentLine.match(/then (steal|stay|\d+% to (steal|stay))/)[1];
+                  const thenActionMatch = currentLine.match(/then (steal|stay|\d+% to (steal|stay)|(if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?))/i);
+                  const thenAction = thenActionMatch[1];
                   const elseAction = currentLine.match(/else (steal|stay|\d+% to (steal|stay))/) ? currentLine.match(/else (steal|stay|\d+% to (steal|stay))/)[1] : null;
-                  blockBehavior += `Bot will ${thenAction} if ${condition}${elseAction ? ', else ' + elseAction : ''}.\n`;
+                  let actionDesc = thenAction;
+                  if (thenAction.startsWith('if ')) {
+                    const nestedCondition = thenAction.match(/(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?)/)[0];
+                    const nestedThenAction = thenAction.match(/then (steal|stay|\d+% to (steal|stay))/)[1];
+                    const nestedElseAction = thenAction.match(/else (steal|stay|\d+% to (steal|stay))/) ? thenAction.match(/else (steal|stay|\d+% to (steal|stay))/)[1] : null;
+                    actionDesc = `if ${nestedCondition} then ${nestedThenAction}${nestedElseAction ? ', else ' + nestedElseAction : ''}`;
+                  }
+                  blockBehavior += `Bot will ${actionDesc} if ${condition}${elseAction ? ', else ' + elseAction : ''}.\n`;
                 }
               } else if (currentLine.startsWith('else ') && !hasIf) {
                 errors.push(`Line ${lineNum}: 'else' must follow an 'if' or 'else if' statement within the block`);
