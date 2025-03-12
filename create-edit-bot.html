@@ -135,16 +135,13 @@
       </div>
       <div class="form-group">
         <label for="bot-name">Bot Name:</label>
-        <input type="text" id="bot-name" class="form-control" placeholder="Enter bot name" value="Escalating Retaliator">
+        <input type="text" id="bot-name" class="form-control" placeholder="Enter bot name">
       </div>
       <div class="form-group">
         <label for="bot-code">Bot Code:</label>
         <div id="code-container">
           <pre id="line-numbers"></pre>
-          <textarea id="bot-code" placeholder="Enter bot code (e.g., 'steal' or 'stay')">if round_number 1 then stay
-else if opponent_last_steal then steal
-else if opponent_steal_count 3 then if random 0-100 < (30 * (round_number - 1)) then steal else if random 0-100 < 100 then stay
-else stay</textarea>
+          <textarea id="bot-code" placeholder="Enter bot code (e.g., 'steal' or 'stay')"></textarea>
         </div>
       </div>
       <div class="form-group">
@@ -210,7 +207,6 @@ else stay</textarea>
           option.textContent = `${botName}`;
           botSelect.appendChild(option);
         });
-        // If an ID is in the URL, select it and load the bot
         const urlId = getParameterByName('id');
         if (urlId) {
           currentBotId = urlId;
@@ -225,7 +221,7 @@ else stay</textarea>
 
     async function loadBot() {
       const botSelect = document.getElementById('bot-select');
-      currentBotId = botSelect.value || currentBotId; // Use URL ID if set
+      currentBotId = botSelect.value || currentBotId;
       if (!currentBotId) {
         showNotification('No bot selected or invalid ID.', 'error');
         return;
@@ -238,7 +234,7 @@ else stay</textarea>
         document.getElementById('bot-name').value = bot.botname || '';
         document.getElementById('bot-code').value = bot.code || '';
         updateLineNumbers();
-        validateCode(); // Validate and update console on load
+        validateCode();
       } catch (error) {
         console.error('Error loading bot:', error);
         showNotification('Failed to load bot. Check console.', 'error');
@@ -348,7 +344,7 @@ else stay</textarea>
           break;
       }
       updateLineNumbers();
-      validateCode(); // Update console after loading example
+      validateCode();
       showNotification('Example loaded!', 'success');
     }
 
@@ -382,53 +378,114 @@ else stay</textarea>
       const errors = [];
       const lines = code.split('\n');
       let behavior = '';
-      let ifContext = null; // Track if statement context for multi-line else
+      const contextStack = []; // Stack to track nested if-else contexts
 
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line && !line.startsWith('//')) {
-          if (line.startsWith('if ')) {
-            // Enhanced regex to support nested ifs and expressions like (30 * (round_number - 1))
-            if (!line.match(/^if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+|\s*<\s*\(30\s*\*\s*\(round_number\s*-\s*1\)))?) then (steal|stay|\d+% to (steal|stay)|if.*)$/i)) {
-              errors.push(`Line ${i + 1}: Invalid if statement syntax`);
-            } else {
-              ifContext = {
-                condition: line.match(/(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+|\s*<\s*\(30\s*\*\s*\(round_number\s*-\s*1\)))?)/)[0],
-                thenAction: line.match(/then (steal|stay|\d+% to (steal|stay)|if.*)/)[1]
-              };
-              behavior += `Bot will ${ifContext.thenAction} if ${ifContext.condition}. `;
+      // Regex for conditions, now supporting expressions like (30 * (round_number - 1))
+      const conditionRegex = /^(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( [><] \d+|\s*<\s*\(\d+\s*\*\s*\(round_number\s*-\s*\d+\)\))?)$/i;
+      const actionRegex = /^(steal|stay|\d+% to (steal|stay))$/i;
+
+      // Recursive function to process nested if-else blocks
+      function processBlock(startIndex, indentLevel = 0) {
+        let i = startIndex;
+        let currentBehavior = '';
+        let currentContext = null;
+
+        while (i < lines.length) {
+          const line = lines[i].trim();
+          if (!line || line.startsWith('//')) {
+            i++;
+            continue;
+          }
+
+          if (line.startsWith('if ') || line.startsWith('else if ')) {
+            const isElseIf = line.startsWith('else if ');
+            const conditionMatch = line.match(/^if (.*?) then (.*)$/i) || line.match(/^else if (.*?) then (.*)$/i);
+            if (!conditionMatch) {
+              errors.push(`Line ${i + 1}: Invalid ${isElseIf ? 'else if' : 'if'} statement syntax`);
+              i++;
+              continue;
             }
+
+            const condition = conditionMatch[1];
+            let action = conditionMatch[2];
+
+            if (!condition.match(conditionRegex)) {
+              errors.push(`Line ${i + 1}: Invalid condition in ${isElseIf ? 'else if' : 'if'} statement`);
+              i++;
+              continue;
+            }
+
+            // Check if the action is another if statement or a direct action
+            if (action.startsWith('if ')) {
+              currentContext = { condition, action: null };
+              contextStack.push(currentContext);
+              const nestedResult = processBlock(i, indentLevel + 1);
+              currentBehavior += `${'  '.repeat(indentLevel)}When ${condition}, ${nestedResult.behavior}\n`;
+              i = nestedResult.nextIndex - 1; // Move index to after the nested block
+            } else if (!action.match(actionRegex)) {
+              errors.push(`Line ${i + 1}: Invalid action in ${isElseIf ? 'else if' : 'if'} statement`);
+              i++;
+              continue;
+            } else {
+              currentContext = { condition, action };
+              currentBehavior += `${'  '.repeat(indentLevel)}When ${condition}, bot will ${action}.\n`;
+            }
+
+            if (isElseIf && contextStack.length === indentLevel) {
+              errors.push(`Line ${i + 1}: 'else if' must follow an 'if' or 'else if' statement at the same level`);
+              i++;
+              continue;
+            }
+
+            if (!isElseIf) contextStack[indentLevel] = currentContext;
           } else if (line.startsWith('else ')) {
-            if (!ifContext) {
-              errors.push(`Line ${i + 1}: 'else' must follow an 'if' statement`);
-            } else if (!line.match(/^else (steal|stay|\d+% to (steal|stay)|if.*)$/)) {
-              errors.push(`Line ${i + 1}: Invalid else statement syntax`);
-            } else {
-              const elseAction = line.match(/else (steal|stay|\d+% to (steal|stay)|if.*)/)[1];
-              if (elseAction.startsWith('if')) {
-                // Nested if will be processed in the next iteration
-                behavior += `Else, `;
-              } else {
-                behavior += `Else ${elseAction}.\n`;
-                ifContext = null; // Clear context after processing else
-              }
+            if (contextStack.length <= indentLevel) {
+              errors.push(`Line ${i + 1}: 'else' must follow an 'if' or 'else if' statement at the same level`);
+              i++;
+              continue;
             }
-          } else if (line === 'else' && ifContext) {
-            errors.push(`Line ${i + 1}: 'else' must be followed by an action or another if statement`);
-          } else if (ifContext) {
-            errors.push(`Line ${i + 1}: Expected 'else' after 'if', got ${line}`);
-          } else if (!line.match(/^(steal|stay|\d+% to (steal|stay))$/)) {
+
+            const action = line.match(/^else (.*)$/)[1];
+            if (action.startsWith('if ')) {
+              const nestedResult = processBlock(i, indentLevel + 1);
+              currentBehavior += `${'  '.repeat(indentLevel)}Otherwise, ${nestedResult.behavior}\n`;
+              i = nestedResult.nextIndex - 1;
+            } else if (!action.match(actionRegex)) {
+              errors.push(`Line ${i + 1}: Invalid action in else statement`);
+              i++;
+              continue;
+            } else {
+              currentBehavior += `${'  '.repeat(indentLevel)}Otherwise, bot will ${action}.\n`;
+            }
+
+            contextStack[indentLevel] = null; // Clear context after else
+            return { behavior: currentBehavior, nextIndex: i + 1 };
+          } else if (!line.match(actionRegex)) {
             errors.push(`Line ${i + 1}: Invalid command`);
+            i++;
+            continue;
           } else {
-            if (line === 'steal') behavior += 'Bot will always steal.\n';
-            else if (line === 'stay') behavior += 'Bot will always stay.\n';
+            if (line === 'steal') currentBehavior += 'Bot will always steal.\n';
+            else if (line === 'stay') currentBehavior += 'Bot will always stay.\n';
             else if (line.match(/^\d+% to (steal|stay)/)) {
               const percent = parseInt(line.match(/^\d+/)[0]);
               const action = line.includes('steal') ? 'steal' : 'stay';
-              behavior += `Bot has ${percent}% chance to ${action}, ${100 - percent}% to ${action === 'steal' ? 'stay' : 'steal'}.\n`;
+              currentBehavior += `Bot has ${percent}% chance to ${action}, ${100 - percent}% to ${action === 'steal' ? 'stay' : 'steal'}.\n`;
             }
+            return { behavior: currentBehavior, nextIndex: i + 1 };
           }
+          i++;
         }
+
+        return { behavior: currentBehavior, nextIndex: i };
+      }
+
+      // Start processing from the first line
+      const result = processBlock(0);
+      behavior = result.behavior;
+
+      if (contextStack.some(ctx => ctx !== null)) {
+        errors.push('Unclosed if statement');
       }
 
       if (errors.length) {
@@ -443,7 +500,6 @@ else stay</textarea>
       }
     }
 
-    // Auto-save every 10 seconds
     let autoSaveTimeout;
     function autoSave() {
       if (currentBotId) {
@@ -459,7 +515,6 @@ else stay</textarea>
       lineNumbers.textContent = Array(lines).fill().map((_, i) => i + 1).join('\n') + '\n';
     }
 
-    // Event listeners
     document.getElementById('username').addEventListener('input', populateBots);
     document.getElementById('bot-code').addEventListener('input', () => {
       updateLineNumbers();
@@ -470,10 +525,8 @@ else stay</textarea>
       document.getElementById('line-numbers').style.top = `-${document.getElementById('bot-code').scrollTop}px`;
     });
 
-    // Initial setup
-    populateBots(); // Initial population
-    updateLineNumbers(); // Initial line numbers
-    validateCode(); // Validate default code on load
+    populateBots();
+    updateLineNumbers();
   </script>
 </body>
 </html>
