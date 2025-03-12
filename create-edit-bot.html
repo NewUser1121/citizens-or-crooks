@@ -141,7 +141,7 @@
         <label for="bot-code">Bot Code:</label>
         <div id="code-container">
           <pre id="line-numbers"></pre>
-          <textarea id="bot-code" placeholder="Enter bot code (e.g., 'steal' or 'stay')"></textarea>
+          <textarea id="bot-code" placeholder="Enter bot code (e.g., 'steal;' or 'stay;')"></textarea>
         </div>
       </div>
       <div class="form-group">
@@ -217,7 +217,6 @@
           option.textContent = `${botName}`;
           botSelect.appendChild(option);
         });
-        // If an ID is in the URL, select it and load the bot
         const urlId = getParameterByName('id');
         if (urlId) {
           currentBotId = urlId;
@@ -232,7 +231,7 @@
 
     async function loadBot() {
       const botSelect = document.getElementById('bot-select');
-      currentBotId = botSelect.value || currentBotId; // Use URL ID if set
+      currentBotId = botSelect.value || currentBotId;
       if (!currentBotId) {
         showNotification('No bot selected or invalid ID.', 'error');
         return;
@@ -245,7 +244,7 @@
         document.getElementById('bot-name').value = bot.botname || '';
         document.getElementById('bot-code').value = bot.code || '';
         updateLineNumbers();
-        validateCode(); // Validate and update console on load
+        validateCode();
       } catch (error) {
         console.error('Error loading bot:', error);
         showNotification('Failed to load bot. Check console.', 'error');
@@ -257,7 +256,6 @@
       const botName = document.getElementById('bot-name').value.trim();
       const botCode = document.getElementById('bot-code').value.trim();
       
-      // Validation checks
       if (!username || !botName) {
         showNotification('Username and bot name are required.', 'error');
         return;
@@ -282,7 +280,7 @@
         if (response.ok) {
           showNotification('Bot saved successfully!', 'success');
           currentBotId = result.id || currentBotId;
-          await populateBots(); // Refresh the bot list
+          await populateBots();
         } else {
           showNotification(`Failed to save bot: ${result.error || 'Unknown error'}`, 'error');
         }
@@ -334,55 +332,55 @@
     function loadExample(example) {
       switch (example) {
         case 'steal':
-          document.getElementById('bot-code').value = 'steal';
+          document.getElementById('bot-code').value = 'steal;';
           break;
         case 'stay':
-          document.getElementById('bot-code').value = 'stay';
+          document.getElementById('bot-code').value = 'stay;';
           break;
         case 'random':
-          document.getElementById('bot-code').value = '70% to steal';
+          document.getElementById('bot-code').value = '70% to steal;';
           break;
         case 'roundCondition':
-          document.getElementById('bot-code').value = 'if round_number 1 then steal\nelse stay';
+          document.getElementById('bot-code').value = 'if round_number 1 then steal; else stay;';
           break;
         case 'stealIfOften':
-          document.getElementById('bot-code').value = 'if opponent_steal_count 5 then steal\nelse stay';
+          document.getElementById('bot-code').value = 'if opponent_steal_count 5 then steal; else stay;';
           break;
         case 'randomHigh':
-          document.getElementById('bot-code').value = 'if random 0-100 > 80 then steal\nelse stay';
+          document.getElementById('bot-code').value = 'if random 0-100 > 80 then steal; else stay;';
           break;
         case 'notLastSteal':
-          document.getElementById('bot-code').value = 'if not opponent_last_steal then stay\nelse steal';
+          document.getElementById('bot-code').value = 'if not opponent_last_steal then stay; else steal;';
           break;
         case 'adaptiveTitForTat':
-          document.getElementById('bot-code').value = 'if round_number 1 then stay\nelse if opponent_steal_count 3 then if random 0-100 > 10 then steal else stay\nelse if opponent_last_steal then steal\nelse stay';
+          document.getElementById('bot-code').value = 'if round_number 1 then stay; else if opponent_steal_count 3 then if random 0-100 > 10 then steal; else stay;; else if opponent_last_steal then steal; else stay;';
           break;
       }
       updateLineNumbers();
-      validateCode(); // Update console after loading example
+      validateCode();
       showNotification('Example loaded!', 'success');
     }
 
     function showCommands() {
       alert(
-        'Available Commands:\n' +
-        '- `steal`: Always steal.\n' +
-        '- `stay`: Always stay.\n' +
-        '- `X% to steal/stay`: Random choice with X% probability (e.g., 70% to steal).\n' +
-        '- `if condition then action` or `else action`: Make a choice based on a condition (one command per line).\n' +
+        'Available Commands (all statements must end with a semicolon ;):\n' +
+        '- `steal;`: Always steal.\n' +
+        '- `stay;`: Always stay.\n' +
+        '- `X% to steal/stay;`: Random choice with X% probability (e.g., 70% to steal;).\n' +
+        '- `if condition then action; else action;`: Make a choice based on a condition (use ;; to end a nested block).\n' +
         '- Conditions: `round_number N` (e.g., round_number 1 for round 1), `not round_number N` (e.g., not round_number 1 for not round 1),\n' +
         '  `opponent_last_steal` (if opponent stole last time), `not opponent_last_steal` (if opponent didn’t steal last time),\n' +
         '  `opponent_steal_count N` (e.g., opponent_steal_count 5 if opponent stole 5+ times), `random 0-100` (random number 0-100).\n' +
-        '- Actions: `steal`, `stay`, or `X% to steal/stay`.\n' +
+        '- Actions: `steal;`, `stay;`, or `X% to steal/stay;`.\n' +
         'Examples:\n' +
-        '1. `steal` - Always steal every round.\n' +
-        '2. `stay` - Always stay every round.\n' +
-        '3. `70% to steal` - 70% chance to steal, 30% to stay.\n' +
-        '4. `if round_number 1 then steal\nelse stay` - Steal on round 1, stay otherwise.\n' +
-        '5. `if opponent_steal_count 5 then steal\nelse stay` - Steal if opponent stole 5+ times, else stay.\n' +
-        '6. `if random 0-100 > 80 then steal\nelse stay` - Steal if random number (0-100) is greater than 80, else stay.\n' +
-        '7. `if not opponent_last_steal then stay\nelse steal` - Stay if opponent didn’t steal last, else steal.\n' +
-        '8. `if round_number 1 then stay\nelse if opponent_steal_count 3 then if random 0-100 > 10 then steal else stay\nelse if opponent_last_steal then steal\nelse stay` - Adaptive tit-for-tat: Cooperate first, retaliate if opponent steals, punish if they steal often (90% steal), with 10% random steal chance.'
+        '1. `steal;` - Always steal every round.\n' +
+        '2. `stay;` - Always stay every round.\n' +
+        '3. `70% to steal;` - 70% chance to steal, 30% to stay.\n' +
+        '4. `if round_number 1 then steal; else stay;` - Steal on round 1, stay otherwise.\n' +
+        '5. `if opponent_steal_count 5 then steal; else stay;` - Steal if opponent stole 5+ times, else stay.\n' +
+        '6. `if random 0-100 > 80 then steal; else stay;` - Steal if random number (0-100) is greater than 80, else stay.\n' +
+        '7. `if not opponent_last_steal then stay; else steal;` - Stay if opponent didn’t steal last, else steal.\n' +
+        '8. `if round_number 1 then stay; else if opponent_steal_count 3 then if random 0-100 > 10 then steal; else stay;; else if opponent_last_steal then steal; else stay;` - Adaptive tit-for-tat: Cooperate first, retaliate if opponent steals, punish if they steal often (90% steal), with 10% random steal chance.'
       );
     }
 
@@ -390,39 +388,60 @@
       const code = document.getElementById('bot-code').value;
       const consoleBox = document.getElementById('console-box');
       const errors = [];
-      const lines = code.split('\n');
+      const lines = code.split('\n').filter(line => line.trim() && !line.trim().startsWith('//'));
       let behavior = '';
-      const ifStack = []; // Stack to track nested if contexts
+      const ifStack = [];
 
       const conditionRegex = /^(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( (>|<) (\d+|\d+\s*\*\s*\(round_number\s*-\s*\d+\))?)?)$/i;
-      const actionRegex = /^(steal|stay|\d+% to (steal|stay)|if .+)$/i;
+      const actionRegex = /^(steal|stay|\d+% to (steal|stay))$/i;
 
       function parseBlock(startIndex, indentLevel = 0) {
         let currentIndex = startIndex;
         let blockBehavior = '';
-        let nestedIfStarted = false;
+        let nestedDepth = 0;
 
         while (currentIndex < lines.length) {
-          const line = lines[currentIndex].trim();
-          if (!line || line.startsWith('//')) {
+          let line = lines[currentIndex].trim();
+          if (!line) {
             currentIndex++;
             continue;
           }
 
-          console.log(`Parsing line ${currentIndex + 1}: ${line}`);
+          // Check for proper semicolon termination
+          const semiCount = (line.match(/;/g) || []).length;
+          if (!line.endsWith(';')) {
+            errors.push(`Line ${currentIndex + 1}: Statement must end with a semicolon`);
+            return { index: currentIndex, behavior: blockBehavior };
+          }
+
+          // Handle nested block termination
+          if (line.endsWith(';;')) {
+            line = line.replace(/;;$/, '');
+            nestedDepth--;
+            if (nestedDepth < 0) {
+              errors.push(`Line ${currentIndex + 1}: Unexpected ;; without nested block`);
+              return { index: currentIndex, behavior: blockBehavior };
+            }
+            if (ifStack.length > 0) {
+              ifStack.pop();
+            }
+          } else {
+            line = line.replace(/;$/, '');
+          }
+
+          console.log(`Parsing line ${currentIndex + 1}: ${line}, nestedDepth: ${nestedDepth}`);
 
           // Handle 'if' or 'else if'
           if (line.startsWith('if ') || (line.startsWith('else if ') && ifStack.length > 0)) {
             const isElseIf = line.startsWith('else if ');
-            const ifMatch = line.match(/^((else )?if) (.+) then (.+)?$/);
+            const ifMatch = line.match(/^((else )?if) (.+) then (.+)$/);
             if (!ifMatch) {
               errors.push(`Line ${currentIndex + 1}: Invalid if statement syntax`);
               return { index: currentIndex, behavior: blockBehavior };
             }
 
-            const prefix = ifMatch[1];
-            let condition = ifMatch[3].trim();
-            let action = ifMatch[4] ? ifMatch[4].trim() : '';
+            const condition = ifMatch[3].trim();
+            let action = ifMatch[4].trim();
 
             if (!conditionRegex.test(condition)) {
               errors.push(`Line ${currentIndex + 1}: Invalid condition: ${condition}`);
@@ -432,21 +451,14 @@
             ifStack.push({ line: currentIndex + 1, indentLevel });
             blockBehavior += `${'  '.repeat(indentLevel)}Bot will `;
 
-            // Check if the action is another if statement or a simple action
-            if (action.startsWith('if ') && actionRegex.test(action)) {
-              nestedIfStarted = true;
-              const nestedResult = parseBlock(currentIndex + 1, indentLevel + 1);
+            if (action.startsWith('if ')) {
+              nestedDepth++;
+              const nestedResult = parseBlock(currentIndex, indentLevel + 1);
               blockBehavior += `if ${condition} then:\n${nestedResult.behavior}`;
-              currentIndex = nestedResult.index - 1; // Adjust for the next line
+              currentIndex = nestedResult.index;
             } else if (actionRegex.test(action)) {
               blockBehavior += `${action} if ${condition}`;
               currentIndex++;
-            } else if (!action) {
-              // Action is on the next line (nested block)
-              nestedIfStarted = true;
-              const nestedResult = parseBlock(currentIndex + 1, indentLevel + 1);
-              blockBehavior += `if ${condition} then:\n${nestedResult.behavior}`;
-              currentIndex = nestedResult.index - 1; // Adjust for the next line
             } else {
               errors.push(`Line ${currentIndex + 1}: Invalid action after then: ${action}`);
               return { index: currentIndex, behavior: blockBehavior };
@@ -459,10 +471,9 @@
             const nestedResult = parseBlock(currentIndex, indentLevel + 1);
             blockBehavior += nestedResult.behavior;
             currentIndex = nestedResult.index;
-            if (!nestedIfStarted) {
-              ifStack.pop(); // Close the current if context if no nested if was started
+            if (nestedDepth === 0 && ifStack.length > 0) {
+              ifStack.pop();
             }
-            nestedIfStarted = false;
           }
           // Handle 'else' with direct action
           else if (line.startsWith('else ') && ifStack.length > 0) {
@@ -473,9 +484,10 @@
             }
             const elseAction = elseMatch[1];
             blockBehavior += `${'  '.repeat(indentLevel)}, else ${elseAction}.\n`;
-            ifStack.pop();
+            if (nestedDepth === 0 && ifStack.length > 0) {
+              ifStack.pop();
+            }
             currentIndex++;
-            nestedIfStarted = false;
           }
           // Handle standalone actions
           else if (actionRegex.test(line)) {
@@ -487,7 +499,9 @@
                 const action = line.includes('steal') ? 'steal' : 'stay';
                 blockBehavior += `${'  '.repeat(indentLevel)}Bot has ${percent}% chance to ${action}, ${100 - percent}% to ${action === 'steal' ? 'stay' : 'steal'}.\n`;
               }
-              ifStack.pop();
+              if (nestedDepth === 0 && ifStack.length > 0) {
+                ifStack.pop();
+              }
               currentIndex++;
             } else {
               if (line === 'steal') blockBehavior += 'Bot will always steal.\n';
@@ -499,7 +513,6 @@
               }
               currentIndex++;
             }
-            nestedIfStarted = false;
           }
           else {
             errors.push(`Line ${currentIndex + 1}: Invalid command`);
@@ -513,24 +526,22 @@
       const result = parseBlock(0);
       behavior = result.behavior;
 
-      // Check for unclosed if statements
       if (ifStack.length > 0) {
         errors.push(`Line ${ifStack[ifStack.length - 1].line}: Unclosed if statement`);
       }
 
       if (errors.length) {
         consoleBox.textContent = errors.join('\n');
-        consoleBox.style.borderColor = '#dc3545'; // Red for errors
+        consoleBox.style.borderColor = '#dc3545';
       } else if (behavior) {
         consoleBox.textContent = 'Code is valid!\nBehavior:\n' + behavior;
-        consoleBox.style.borderColor = '#28a745'; // Green for success
+        consoleBox.style.borderColor = '#28a745';
       } else {
         consoleBox.textContent = 'No valid code entered.';
-        consoleBox.style.borderColor = '#3a6bb8'; // Default color
+        consoleBox.style.borderColor = '#3a6bb8';
       }
     }
 
-    // Auto-save every 10 seconds
     let autoSaveTimeout;
     function autoSave() {
       if (currentBotId) {
@@ -546,7 +557,6 @@
       lineNumbers.textContent = Array(lines).fill().map((_, i) => i + 1).join('\n') + '\n';
     }
 
-    // Event listeners
     document.getElementById('username').addEventListener('input', populateBots);
     document.getElementById('bot-code').addEventListener('input', () => {
       updateLineNumbers();
@@ -557,9 +567,8 @@
       document.getElementById('line-numbers').style.top = `-${document.getElementById('bot-code').scrollTop}px`;
     });
 
-    // Initial setup
-    populateBots(); // Initial population
-    updateLineNumbers(); // Initial line numbers
+    populateBots();
+    updateLineNumbers();
   </script>
 </body>
 </html>
