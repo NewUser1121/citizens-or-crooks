@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kaleb's Citizens or Crooks</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      font-family: 'Arial', sans-serif;
+      color: #fff;
+      overflow: hidden;
+      position: relative;
+      min-height: 100vh;
+    }
+    #particles {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .particle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 50%;
+      animation: float 15s infinite ease-in-out;
+    }
+    @keyframes float {
+      0% { transform: translateY(100vh) scale(0.5); opacity: 0; }
+      50% { opacity: 1; }
+      100% { transform: translateY(-100vh) scale(1.5); opacity: 0; }
+    }
+    .container {
+      padding: 50px;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    h1 {
+      font-size: 3rem;
+      text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.4);
+      margin-bottom: 2.5rem;
+      font-family: 'Helvetica', sans-serif;
+    }
+    .btn {
+      margin: 15px;
+      padding: 15px 30px;
+      font-size: 1.3rem;
+      border-radius: 25px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+      background-color: #2a5298;
+      border: none;
+      color: #fff;
+    }
+    .btn:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      background-color: #3a6bb8;
+    }
+    #tutorial-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+    }
+    .modal-content {
+      background: #1e3c72;
+      margin: 15% auto;
+      padding: 20px;
+      border-radius: 10px;
+      width: 80%;
+      max-width: 500px;
+      color: #d4d4d4;
+      text-align: left;
+    }
+    .close {
+      float: right;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      h1 { font-size: 2rem; }
+      .btn { font-size: 1rem; padding: 10px 20px; }
+      .modal-content { margin: 20% auto; }
+    }
+  </style>
+</head>
+<body>
+  <div id="particles"></div>
+  <div class="container">
+    <h1>Kaleb's Citizens or Crooks</h1>
+    <button class="btn" onclick="window.location.href='/create-edit-bot.html'">Create/Edit Bot</button>
+    <button class="btn" onclick="window.location.href='/my-bots.html'">My Bots</button>
+    <button class="btn" onclick="window.location.href='/play-game.html'">Play</button>
+    <button class="btn" onclick="window.location.href='/view-bots.html'">Leaderboard</button>
+  </div>
+  <div id="tutorial-modal">
+    <div class="modal-content">
+      <span class="close" onclick="document.getElementById('tutorial-modal').style.display='none'">&times;</span>
+      <h2>Welcome to Citizens or Crooks!</h2>
+      <p>Learn the basics:</p>
+      <ul>
+        <li>Create a bot with a unique name and code strategy.</li>
+        <li>Use commands like <code>steal</code>, <code>stay</code>, or <code>if round 1 then steal</code>.</li>
+        <li>Play against other bots to earn points!</li>
+        <li>Check the leaderboard to see your rank.</li>
+      </ul>
+      <p>Click anywhere to close this and start playing!</p>
+    </div>
+  </div>
+
+  <script>
+    const particleContainer = document.getElementById('particles');
+    for (let i = 0; i < 30; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      particle.style.left = `${Math.random() * 100}%`;
+      particle.style.animationDelay = `${Math.random() * 15}s`;
+      particleContainer.appendChild(particle);
+    }
+
+    // Show tutorial on first visit
+    if (!localStorage.getItem('tutorialShown')) {
+      document.getElementById('tutorial-modal').style.display = 'block';
+      localStorage.setItem('tutorialShown', 'true');
+    }
+    document.getElementById('tutorial-modal').addEventListener('click', () => {
+      document.getElementById('tutorial-modal').style.display = 'none';
+    });
+  </script>
+</body>
+</html>

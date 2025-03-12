@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Bots - Kaleb's Citizens or Crooks</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #1e3c72; font-family: 'Arial', sans-serif; color: #d4d4d4; }
+    .container { padding: 40px; max-width: 1000px; margin: 0 auto; }
+    .bot-list { list-style: none; padding: 0; }
+    .bot-item {
+      background: #2a5298;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: transform 0.3s ease;
+    }
+    .bot-item:hover { transform: translateY(-2px); }
+    .bot-actions button {
+      margin-left: 10px;
+      padding: 5px 10px;
+      border-radius: 10px;
+      background: #3a6bb8;
+      border: none;
+      color: #d4d4d4;
+    }
+    .btn { border-radius: 20px; padding: 10px 20px; }
+    @media (max-width: 768px) {
+      .bot-item { flex-direction: column; text-align: center; }
+      .bot-actions { margin-top: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>My Bots</h1>
+    <ul class="bot-list" id="bot-list"></ul>
+    <button class="btn mt-3" onclick="window.location.href='/index.html'">Back to Home</button>
+  </div>
+
+  <script>
+    async function fetchMyBots() {
+      const username = prompt('Enter your username:');
+      if (!username) return;
+      const response = await fetch(`/api/bots?username=${encodeURIComponent(username)}`);
+      const bots = await response.json();
+      const botList = document.getElementById('bot-list');
+      botList.innerHTML = '';
+      bots.forEach(bot => {
+        const li = document.createElement('li');
+        li.className = 'bot-item';
+        li.innerHTML = `
+          <span>${bot.botName} - ${bot.points} pts</span>
+          <div class="bot-actions">
+            <button onclick="window.location.href='/create-edit-bot.html?id=${bot.id}'">Edit</button>
+            <button onclick="deleteBot(${bot.id})">Delete</button>
+          </div>
+        `;
+        botList.appendChild(li);
+      });
+    }
+
+    async function deleteBot(id) {
+      if (!confirm('Are you sure you want to delete this bot?')) return;
+      try {
+        const response = await fetch(`/api/bots/${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (response.ok) {
+          alert('Bot deleted successfully!');
+          fetchMyBots();
+        } else {
+          alert(`Error: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        alert('Failed to delete bot.');
+      }
+    }
+
+    fetchMyBots();
+  </script>
+</body>
+</html>

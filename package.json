@@ -1,0 +1,22 @@
+{
+  "name": "citizens-or-crooks",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "20": "^3.1.9",
+    "22": "^0.0.0",
+    "23": "^0.0.0",
+    "24": "^0.0.0",
+    "citizens-or-crooks": "file:",
+    "express": "^4.21.2",
+    "sqlite3": "^5.1.7",
+    "ws": "^8.18.1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

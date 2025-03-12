@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create/Edit Bot - Kaleb's Citizens or Crooks</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #1e3c72;
+      font-family: 'Arial', sans-serif;
+      color: #d4d4d4;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      padding: 40px;
+      max-width: 1000px;
+      width: 100%;
+    }
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 25px;
+      justify-content: center;
+    }
+    .btn {
+      border-radius: 20px;
+      padding: 10px 20px;
+      background-color: #2a5298;
+      border: none;
+      color: #d4d4d4;
+      transition: background-color 0.3s ease, transform 0.3s ease;
+    }
+    .btn:hover {
+      background-color: #3a6bb8;
+      transform: translateY(-2px);
+    }
+    .btn:disabled {
+      background-color: #444;
+      cursor: not-allowed;
+    }
+    .bot-name-input, .username-input {
+      padding: 10px;
+      font-size: 1.1em;
+      border: none;
+      min-width: 180px;
+      text-align: center;
+      background-color: #2a5298;
+      color: #d4d4d4;
+      border-radius: 10px;
+      outline: none;
+      transition: border-color 0.3s ease;
+    }
+    .bot-name-input[contenteditable="true"],
+    .username-input[contenteditable="true"] {
+      border: 2px solid #3a6bb8;
+      background-color: #2e5a9e;
+    }
+    .code-editor {
+      border: 1px solid #3a6bb8;
+      border-radius: 10px;
+      padding: 20px;
+      height: 500px;
+      display: flex;
+      background: #1e3c72;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .line-numbers {
+      width: 50px;
+      text-align: right;
+      padding-right: 15px;
+      color: #888;
+      background: #1e3c72;
+      border-right: 1px solid #3a6bb8;
+      font-family: 'Consolas', monospace;
+    }
+    .code-area {
+      flex-grow: 1;
+      border: none;
+      resize: none;
+      outline: none;
+      background: #1e3c72;
+      color: #d4d4d4;
+      font-family: 'Consolas', monospace;
+      line-height: 1.6;
+      font-size: 1em;
+      padding: 10px;
+    }
+    .code-area::selection {
+      background: #3a6bb8;
+      color: #fff;
+    }
+    .console {
+      border: 1px solid #3a6bb8;
+      border-radius: 10px;
+      padding: 15px;
+      background: #1e3c72;
+      color: #d4d4d4;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+    }
+    .console-header {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #28a745;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      display: none;
+      z-index: 1000;
+      animation: fadeInOut 3s ease;
+    }
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateY(-20px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-20px); }
+    }
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 200px;
+      background-color: #333;
+      color: #fff;
+      text-align: center;
+      border-radius: 6px;
+      padding: 5px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -100px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+    @media (max-width: 768px) {
+      .button-row { flex-direction: column; align-items: center; }
+      .code-editor { height: 350px; }
+      .btn, .bot-name-input, .username-input { font-size: 0.95rem; }
+      .notification { top: 10px; right: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="button-row">
+      <button class="btn" id="save-btn" onclick="saveBot()">Save</button>
+      <button class="btn" onclick="toggleEditMode()">Edit</button>
+      <div class="bot-name-input" contenteditable="false">(Bot name)</div>
+      <div class="username-input" contenteditable="false">(Username)</div>
+      <button class="btn" onclick="openBot()">Open</button>
+      <button class="btn" onclick="testBot()">Test</button>
+      <select class="form-control examples-dropdown" onchange="applyExample(this.value)">
+        <option value="">Examples ▼</option>
+        <option value="example: 1">example: 1</option>
+        <option value="example: 2">example: 2</option>
+        <option value="example: 3">example: 3</option>
+        <option value="example: 4">example: 4</option>
+        <option value="example: 5">example: 5</option>
+      </select>
+      <button class="btn" onclick="deleteBot()">Delete</button>
+      <div class="tooltip">
+        <button class="btn" onclick="showCommands()">Commands</button>
+        <span class="tooltiptext">View available coding commands</span>
+      </div>
+      <button class="btn" onclick="showWhatIsThis()">What Is This</button>
+    </div>
+
+    <div class="code-editor">
+      <div class="line-numbers" id="line-numbers"></div>
+      <textarea class="code-area" id="code-area" spellcheck="false" oninput="updateLineNumbers(); validateCode()"></textarea>
+    </div>
+
+    <div id="console" class="console" style="display: none;">
+      <div class="console-header">Console ▼</div>
+      <div id="console-content"></div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+    <button class="btn mt-3" onclick="window.location.href='/index.html'">Back to Home</button>
+  </div>
+
+  <script>
+    let editMode = false;
+    let currentBotId = null;
+    let autoSaveTimeout = null;
+
+    async function fetchBot() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const botId = urlParams.get('id');
+      if (botId) {
+        currentBotId = botId;
+        const response = await fetch(`/api/bots/${botId}`);
+        const bot = await response.json();
+        if (bot) {
+          document.querySelector('.bot-name-input').textContent = bot.botName || '(Bot name)';
+          document.querySelector('.username-input').textContent = bot.username || '(Username)';
+          document.querySelector('#code-area').value = bot.code || '';
+          updateLineNumbers();
+          validateCode();
+          showNotification(`Loaded bot: ${bot.botName}`);
+        }
+      }
+    }
+
+    function updateLineNumbers() {
+      const codeArea = document.getElementById('code-area');
+      const lineNumbers = document.getElementById('line-numbers');
+      const lines = codeArea.value.split('\n').length;
+      lineNumbers.innerHTML = Array.from({ length: lines }, (_, i) => i + 1).join('<br>');
+    }
+
+    function toggleEditMode() {
+      editMode = !editMode;
+      const botNameInput = document.querySelector('.bot-name-input');
+      const usernameInput = document.querySelector('.username-input');
+      const codeArea = document.querySelector('#code-area');
+
+      botNameInput.contentEditable = editMode;
+      usernameInput.contentEditable = editMode;
+      codeArea.readOnly = !editMode;
+
+      if (editMode) {
+        botNameInput.style.border = '2px solid #3a6bb8';
+        usernameInput.style.border = '2px solid #3a6bb8';
+        codeArea.style.border = '2px solid #3a6bb8';
+        botNameInput.focus();
+        const range = document.createRange();
+        range.selectNodeContents(botNameInput);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        botNameInput.addEventListener('keydown', function onEnter(event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            usernameInput.focus();
+            const range2 = document.createRange();
+            range2.selectNodeContents(usernameInput);
+            selection.removeAllRanges();
+            selection.addRange(range2);
+            botNameInput.removeEventListener('keydown', onEnter);
+          }
+        }, { once: true });
+      } else {
+        botNameInput.style.border = 'none';
+        usernameInput.style.border = 'none';
+        codeArea.style.border = 'none';
+      }
+    }
+
+    async function openBot() {
+      const username = prompt('Enter username:');
+      if (username) {
+        const response = await fetch(`/api/bots?username=${encodeURIComponent(username)}`);
+        const bots = await response.json();
+        if (bots.length === 0) {
+          alert('No bots found for that username.');
+        } else if (bots.length === 1) {
+          window.location.href = `/create-edit-bot.html?id=${bots[0].id}`;
+        } else {
+          const botNames = bots.map(bot => bot.botName).join(', ');
+          const choice = prompt(`Choose a bot: ${botNames}`);
+          const selectedBot = bots.find(bot => bot.botName === choice);
+          if (selectedBot) {
+            window.location.href = `/create-edit-bot.html?id=${selectedBot.id}`;
+          } else {
+            alert('Invalid choice.');
+          }
+        }
+      }
+    }
+
+    async function saveBot() {
+      const botName = document.querySelector('.bot-name-input').textContent.trim();
+      const username = document.querySelector('.username-input').textContent.trim();
+      const code = document.querySelector('#code-area').value.trim();
+
+      if (!botName || !username || botName === '(Bot name)' || username === '(Username)') {
+        showNotification('Please enter valid bot name and username.', 'error');
+        return;
+      }
+
+      try {
+        document.getElementById('save-btn').disabled = true;
+        showNotification('Saving...', 'info');
+        const response = await fetch('/api/bots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ botName, username, code, id: currentBotId })
+        });
+        const result = await response.json();
+        if (response.ok) {
+          currentBotId = result.id || currentBotId;
+          showNotification(`Bot ${currentBotId ? 'updated' : 'created'}! Saved as: ${botName}`, 'success');
+          setTimeout(() => window.location.href = '/view-bots.html', 2000);
+        } else {
+          showNotification(`Error saving bot: ${result.error || 'Unknown error'}`, 'error');
+        }
+      } catch (error) {
+        console.error('Fetch error:', error);
+        showNotification('Failed to save bot. Check console.', 'error');
+      } finally {
+        document.getElementById('save-btn').disabled = false;
+      }
+    }
+
+    async function deleteBot() {
+      if (!currentBotId || !confirm('Are you sure you want to delete this bot?')) return;
+      try {
+        const response = await fetch(`/api/bots/${currentBotId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        if (response.ok) {
+          showNotification('Bot deleted successfully!', 'success');
+          setTimeout(() => window.location.href = '/my-bots.html', 2000);
+        } else {
+          showNotification(`Error deleting bot: ${result.error}`, 'error');
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        showNotification('Failed to delete bot. Check console.', 'error');
+      }
+    }
+
+    function testBot() {
+      const userBotCode = document.querySelector('#code-area').value;
+      const simulationResult = simulateGame(userBotCode);
+      if (simulationResult.error) {
+        showConsole(`Error: ${simulationResult.error}`);
+      } else {
+        showConsole(simulationResult.results.join('\n') + `\n\nUser Total Points: ${simulationResult.userPoints}, Opponent Total Points: ${simulationResult.opponentPoints}`);
+      }
+    }
+
+    function simulateGame(userBotCode) {
+      let userPoints = 0;
+      let opponentPoints = 0;
+      const userHistory = [];
+      const opponentHistory = [];
+      const results = [];
+
+      for (let round = 1; round <= 20; round++) {
+        const opponentChoice = round % 2 === 1 ? 'steal' : 'stay';
+        const userResult = interpretBotCode(userBotCode, opponentHistory, round);
+        if (userResult.error) return { error: userResult.error };
+        const userChoice = userResult.decision;
+
+        userHistory.push(userChoice);
+        opponentHistory.push(opponentChoice);
+
+        const [userPts, oppPts] = calculateRoundPoints(userChoice, opponentChoice);
+        userPoints += userPts;
+        opponentPoints += oppPts;
+        results.push(`Round ${round}: User ${userChoice}, Opponent ${opponentChoice} - User: ${userPoints}, Opponent: ${opponentPoints}`);
+      }
+      return { results, userPoints, opponentPoints };
+    }
+
+    function calculateRoundPoints(choice1, choice2) {
+      if (choice1 === 'steal' && choice2 === 'stay') return [8, 0]; // Increased by 4
+      if (choice1 === 'stay' && choice2 === 'steal') return [0, 8]; // Increased by 4
+      if (choice1 === 'stay' && choice2 === 'stay') return [4, 4];  // Increased by 4
+      return [0, 0]; // Both steal remains 0
+    }
+
+    function interpretBotCode(code, opponentHistory, round) {
+      const lines = code.split('\n');
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine || trimmedLine.startsWith('//')) continue;
+
+        if (['steal', 'stay'].includes(trimmedLine.toLowerCase())) {
+          return { decision: trimmedLine.toLowerCase() };
+        }
+
+        const percentageMatch = trimmedLine.match(/(\d+)% to (steal|stay)/i);
+        if (percentageMatch) {
+          const percent = parseInt(percentageMatch[1]) / 100;
+          return { decision: Math.random() < percent ? percentageMatch[2].toLowerCase() : (percentageMatch[2] === 'steal' ? 'stay' : 'steal') };
+        }
+
+        const ifMatch = trimmedLine.match(/if (.+) then (.+)( else (.+))?/i);
+        if (ifMatch) {
+          const condition = ifMatch[1].trim();
+          const action = ifMatch[2].trim();
+          const elseAction = ifMatch[4] ? ifMatch[4].trim() : null;
+
+          try {
+            if (evaluateCondition(condition, round, opponentHistory)) {
+              return { decision: executeAction(action, opponentHistory, round) };
+            } else if (elseAction) {
+              return interpretBotCode(elseAction, opponentHistory, round);
+            }
+          } catch (e) {
+            return { error: `Error in line: "${line}": ${e.message}` };
+          }
+        }
+      }
+      return { decision: Math.random() > 0.5 ? 'steal' : 'stay' };
+    }
+
+    function evaluateCondition(condition, round, opponentHistory) {
+      const nestedIfMatch = condition.match(/(.+) then (.+)/i);
+      if (nestedIfMatch) {
+        const subCondition = nestedIfMatch[1].trim();
+        return evaluateCondition(subCondition, round, opponentHistory);
+      }
+
+      const parts = condition.split(' ');
+      const operator = parts[0];
+      const value = parts.slice(1).join(' ');
+
+      if (operator === 'round_number') return parseInt(value) === round;
+      if (operator === 'not') {
+        if (value === 'round_number 1') return round !== 1;
+        if (value === 'opponent_last_steal') return !(opponentHistory.length > 0 && opponentHistory[opponentHistory.length - 1] === 'steal');
+      }
+      if (operator === 'opponent_last_steal') return opponentHistory.length > 0 && opponentHistory[opponentHistory.length - 1] === 'steal';
+      if (operator === 'opponent_steal_count') {
+        const count = parseInt(value) || 0;
+        return opponentHistory.filter(c => c === 'steal').length >= count;
+      }
+      if (operator === 'random') {
+        const [min, max] = value.split('-').map(Number);
+        return Math.random() * (max - min) + min > 50;
+      }
+      throw new Error(`Invalid condition: "${condition}"`);
+    }
+
+    function executeAction(action, opponentHistory, round) {
+      const percentageMatch = action.match(/(\d+)% to (steal|stay)/i);
+      if (percentageMatch) {
+        const percent = parseInt(percentageMatch[1]) / 100;
+        return Math.random() < percent ? percentageMatch[2].toLowerCase() : (percentageMatch[2] === 'steal' ? 'stay' : 'steal');
+      }
+      if (['steal', 'stay'].includes(action.toLowerCase())) return action.toLowerCase();
+      return interpretBotCode(action, opponentHistory, round);
+    }
+
+    function showConsole(message) {
+      const consoleDiv = document.getElementById('console');
+      const consoleContent = document.getElementById('console-content');
+      consoleDiv.style.display = 'block';
+      consoleContent.textContent = message;
+    }
+
+    function showNotification(message, type = 'success') {
+      const notification = document.getElementById('notification');
+      notification.textContent = message;
+      notification.style.backgroundColor = type === 'error' ? '#dc3545' : type === 'info' ? '#17a2b8' : '#28a745';
+      notification.style.display = 'block';
+      setTimeout(() => notification.style.display = 'none', 3000);
+    }
+
+    function applyExample(example) {
+      const codeMap = {
+        'example: 1': `// 50% steal on round 1\nif round_number 1 then 50% to steal\n// Steal if opponent stole last\nif not opponent_last_steal then stay else steal`,
+        'example: 2': `// Always stay\nstay`,
+        'example: 3': `// Steal on round 1, then react\nif round_number 1 then steal\nif not round_number 1 then if opponent_last_steal then steal else stay`,
+        'example: 4': `// 70% steal on round 1, 30% if opponent stole 2+ times\nif round_number 1 then 70% to steal\nif opponent_steal_count 2 then 30% to steal else stay`,
+        'example: 5': `// Random strategy\nif random 0-100 then steal else stay`
+      };
+      document.querySelector('#code-area').value = codeMap[example] || '';
+      updateLineNumbers();
+      validateCode();
+    }
+
+    function showWhatIsThis() {
+      alert(
+        'Welcome to the Bot Editor!\n\n' +
+        '- Create/edit bots with unique strategies.\n' +
+        '- Use commands like `steal`, `stay`, `if`, or `random(0-100)`.\n' +
+        '- Test your bot and save to compete!\n' +
+        '- Delete bots from "My Bots" page.'
+      );
+    }
+
+    function showCommands() {
+      alert(
+        'Available Commands:\n' +
+        '- `steal`: Always steal.\n' +
+        '- `stay`: Always stay.\n' +
+        '- `X% to steal/stay`: Random choice with X% probability.\n' +
+        '- `if condition then action [else action]`: Conditional logic.\n' +
+        '- Conditions: `round_number N`, `not round_number 1`, `opponent_last_steal`, `not opponent_last_steal`, `opponent_steal_count N`, `random 0-100`.\n' +
+        'Example: `if round_number 1 then steal else 50% to steal`'
+      );
+    }
+
+    function validateCode() {
+      const code = document.getElementById('code-area').value;
+      const errors = [];
+      const lines = code.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line && !line.startsWith('//')) {
+          if (!line.match(/^(steal|stay|\d+% to (steal|stay)|if .+ then .+( else .+)?)$/i)) {
+            errors.push(`Line ${i + 1}: Invalid syntax`);
+          }
+        }
+      }
+      if (errors.length) showConsole(errors.join('\n'));
+      else document.getElementById('console').style.display = 'none';
+    }
+
+    // Auto-save every 10 seconds
+    function autoSave() {
+      if (editMode && currentBotId) {
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(saveBot, 10000);
+      }
+    }
+    document.getElementById('code-area').addEventListener('input', autoSave);
+
+    fetchBot();
+    updateLineNumbers();
+    validateCode();
+  </script>
+</body>
+</html>

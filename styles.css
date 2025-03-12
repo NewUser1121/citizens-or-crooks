@@ -1,0 +1,145 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: white;
+    color: black;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+  
+  .container {
+    text-align: center;
+    width: 90%;
+    max-width: 800px;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  
+  .button-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  .small-button {
+    padding: 8px 12px;
+    font-size: 1em;
+    border: 2px solid black;
+    background-color: white;
+    cursor: pointer;
+    min-width: 80px;
+    min-height: 40px;
+  }
+  
+  .bot-name-input, .username-input {
+    padding: 8px;
+    font-size: 1em;
+    border: none;
+    min-width: 120px;
+    min-height: 40px;
+    text-align: center;
+    display: inline-block;
+    outline: none;
+  }
+  
+  .bot-name-input[contenteditable="true"],
+  .username-input[contenteditable="true"] {
+    border: 2px solid black;
+    background-color: #f0f0f0;
+    cursor: text;
+  }
+  
+  .code-editor {
+    display: flex;
+    width: 100%;
+    min-height: 300px;
+    background-color: #1e1e1e;
+    border: 1px solid #858585;
+    margin-bottom: 20px;
+  }
+  
+  .line-numbers {
+    width: 40px;
+    background-color: #1e1e1e;
+    color: #858585;
+    text-align: right;
+    padding: 5px;
+    font-family: monospace;
+    font-size: 1em;
+    line-height: 1.5;
+  }
+  
+  .code-area {
+    flex: 1;
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    border: none;
+    padding: 5px;
+    font-family: monospace;
+    font-size: 1em;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+  }
+  
+  .examples-dropdown {
+    padding: 8px;
+    font-size: 1em;
+    border: 2px solid black;
+    min-width: 120px;
+    min-height: 40px;
+  }
+  
+  .console {
+    width: 100%;
+    background-color: #c0d8f0;
+    padding: 10px;
+    margin-top: 20px;
+    text-align: left;
+    display: none;
+    color: #000;
+  }
+  
+  .console-header {
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  
+  .back-button {
+    margin-top: 20px;
+    padding: 12px 25px;
+    font-size: 1.2em;
+    border: 2px solid black;
+    background-color: white;
+    cursor: pointer;
+    width: 150px;
+    min-height: 48px;
+  }
+  
+  @media (max-width: 1024px) {
+    .container {
+      width: 95%;
+      padding: 15px;
+    }
+  
+    .button-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  
+    .small-button, .bot-name-input, .username-input, .examples-dropdown {
+      width: 100%;
+      max-width: 200px;
+    }
+  }
+  
+  @media (min-width: 1025px) {
+    .small-button:hover, .back-button:hover {
+      background-color: #f0f0f0;
+    }
+  }
