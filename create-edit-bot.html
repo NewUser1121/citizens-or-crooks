@@ -174,7 +174,17 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     let currentBotId = null;
-    let ifContext = null; // Track if statement context for multi-line else
+
+    // Get URL parameter
+    function getParameterByName(name, url) {
+      if (!url) url = window.location.href;
+      name = name.replace(/[\[\]]/g, '\\$&');
+      const regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)');
+      const results = regex.exec(url);
+      if (!results) return null;
+      if (!results[2]) return '';
+      return decodeURIComponent(results[2].replace(/\+/g, ' '));
+    }
 
     async function populateBots() {
       const username = document.getElementById('username').value.trim();
@@ -196,6 +206,13 @@
           option.textContent = `${botName}`;
           botSelect.appendChild(option);
         });
+        // If an ID is in the URL, select it and load the bot
+        const urlId = getParameterByName('id');
+        if (urlId) {
+          currentBotId = urlId;
+          botSelect.value = urlId;
+          await loadBot();
+        }
       } catch (error) {
         console.error('Error fetching bots:', error);
         showNotification('Failed to load bots. Check console.', 'error');
@@ -204,8 +221,11 @@
 
     async function loadBot() {
       const botSelect = document.getElementById('bot-select');
-      currentBotId = botSelect.value;
-      if (!currentBotId) return;
+      currentBotId = botSelect.value || currentBotId; // Use URL ID if set
+      if (!currentBotId) {
+        showNotification('No bot selected or invalid ID.', 'error');
+        return;
+      }
 
       try {
         const response = await fetch(`/api/bots/${currentBotId}`);
@@ -354,7 +374,7 @@
       const errors = [];
       const lines = code.split('\n');
       let behavior = '';
-      ifContext = null; // Reset context
+      let ifContext = null; // Reset context
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -432,6 +452,8 @@
     document.getElementById('bot-code').addEventListener('scroll', () => {
       document.getElementById('line-numbers').style.top = `-${document.getElementById('bot-code').scrollTop}px`;
     });
+
+    // Initial setup
     populateBots(); // Initial population
     updateLineNumbers(); // Initial line numbers
   </script>
