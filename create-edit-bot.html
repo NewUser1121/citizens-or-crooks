@@ -305,12 +305,21 @@
     }
 
     async function saveBot() {
-      const botName = document.querySelector('.bot-name-input').textContent.trim();
-      const username = document.querySelector('.username-input').textContent.trim();
+      const botNameInput = document.querySelector('.bot-name-input');
+      const usernameInput = document.querySelector('.username-input');
       const code = document.querySelector('#code-area').value.trim();
 
-      if (!botName || !username || botName === '(Bot name)' || username === '(Username)') {
-        showNotification('Please enter valid bot name and username.', 'error');
+      // Debug: Log the raw and trimmed values
+      console.log('botName raw:', botNameInput.textContent);
+      console.log('botName trimmed:', botNameInput.textContent.trim());
+      console.log('username raw:', usernameInput.textContent);
+      console.log('username trimmed:', usernameInput.textContent.trim());
+
+      const botName = botNameInput.textContent.trim();
+      const username = usernameInput.textContent.trim();
+
+      if (!botName || !username || botName === '(Bot name)' || username === '(Username)' || botName === '' || username === '') {
+        showNotification('Please enter valid bot name and username (no empty values).', 'error');
         return;
       }
 
