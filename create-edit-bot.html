@@ -395,7 +395,7 @@
       const ifStack = []; // Stack to track nested if contexts
 
       const conditionRegex = /^(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( (>|<) (\d+|\d+\s*\*\s*\(round_number\s*-\s*\d+\))?)?)$/i;
-      const actionRegex = /^(steal|stay|\d+% to (steal|stay))$/i;
+      const actionRegex = /^(steal|stay|\d+% to (steal|stay)|if .+)$/i;
 
       function parseBlock(startIndex, indentLevel = 0) {
         let currentIndex = startIndex;
@@ -414,14 +414,15 @@
           // Handle 'if' or 'else if'
           if (line.startsWith('if ') || (line.startsWith('else if ') && ifStack.length > 0)) {
             const isElseIf = line.startsWith('else if ');
-            const ifMatch = line.match(/^((else )?if) (.+) then (.+)$/);
+            const ifMatch = line.match(/^((else )?if) (.+) then (.+)?$/);
             if (!ifMatch) {
               errors.push(`Line ${currentIndex + 1}: Invalid if statement syntax`);
               return { index: currentIndex, behavior: blockBehavior };
             }
 
-            const condition = ifMatch[3];
-            let action = ifMatch[4];
+            const prefix = ifMatch[1];
+            let condition = ifMatch[3].trim();
+            let action = ifMatch[4] ? ifMatch[4].trim() : '';
 
             if (!conditionRegex.test(condition)) {
               errors.push(`Line ${currentIndex + 1}: Invalid condition: ${condition}`);
@@ -430,16 +431,22 @@
 
             ifStack.push({ line: currentIndex + 1, indentLevel });
             blockBehavior += `${'  '.repeat(indentLevel)}Bot will `;
-            
-            // Check if the action is another if statement
-            if (action.startsWith('if ')) {
+
+            // Check if the action is another if statement or a simple action
+            if (action.startsWith('if ') && actionRegex.test(action)) {
               nestedIfStarted = true;
-              const nestedResult = parseBlock(currentIndex, indentLevel + 1);
+              const nestedResult = parseBlock(currentIndex + 1, indentLevel + 1);
               blockBehavior += `if ${condition} then:\n${nestedResult.behavior}`;
-              currentIndex = nestedResult.index;
+              currentIndex = nestedResult.index - 1; // Adjust for the next line
             } else if (actionRegex.test(action)) {
               blockBehavior += `${action} if ${condition}`;
               currentIndex++;
+            } else if (!action) {
+              // Action is on the next line (nested block)
+              nestedIfStarted = true;
+              const nestedResult = parseBlock(currentIndex + 1, indentLevel + 1);
+              blockBehavior += `if ${condition} then:\n${nestedResult.behavior}`;
+              currentIndex = nestedResult.index - 1; // Adjust for the next line
             } else {
               errors.push(`Line ${currentIndex + 1}: Invalid action after then: ${action}`);
               return { index: currentIndex, behavior: blockBehavior };
