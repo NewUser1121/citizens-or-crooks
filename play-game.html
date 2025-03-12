@@ -105,97 +105,93 @@
   </div>
 
   <script>
-    let gameInterval;
+   // let gameInterval;
+   // const ws = new WebSocket('ws://localhost:8080');
 
-    async function populateBots() {
-      try {
-          const response = await fetch('/api/bots.php');
-          const bots = await response.json();
-          const bot1Select = document.getElementById('bot1-select');
-          const bot2Select = document.getElementById('bot2-select');
-          bot1Select.innerHTML = '<option value="">Select a bot...</option>';
-          bot2Select.innerHTML = '<option value="">Select a bot...</option>';
-          bots.forEach(bot => {
-              const option = document.createElement('option');
-              option.value = bot.id;
-              option.textContent = `${bot.botName} (${bot.username}) - ${bot.points} pts`;
-              bot1Select.appendChild(option.cloneNode(true));
-              bot2Select.appendChild(option.cloneNode(true));
-          });
-      } catch (error) {
-          console.error('Error populating bots:', error);
-          showNotification('Failed to load bots. Check console.', 'error');
-      }
-    }
+   // ws.onmessage = (event) => {
+   //   const data = JSON.parse(event.data);
+   //   if (data.type === 'botUpdate') populateBots();
+  //  };
 
-    function createCircles() {
-      const bot1Moves = document.getElementById('bot1-moves');
-      const bot2Moves = document.getElementById('bot2-moves');
-      for (let i = 1; i <= 20; i++) {
-        const circle1 = document.createElement('div');
-        circle1.className = 'circle';
-        circle1.id = `bot1-round${i}`;
-        bot1Moves.appendChild(circle1);
-        const circle2 = document.createElement('div');
-        circle2.className = 'circle';
-        circle2.id = `bot2-round${i}`;
-        bot2Moves.appendChild(circle2);
-      }
-    }
+//    ws.onerror = (error) => {
+  //    console.error('WebSocket error:', error);
+  //    showNotification('WebSocket connection failed. Check server.', 'error');
+ //   };
 
-    async function startGame() {
-      console.log('startGame called');
-      const bot1Id = document.getElementById('bot1-select').value;
-      const bot2Id = document.getElementById('bot2-select').value;
-      if (!bot1Id || !bot2Id) {
-          showNotification('Please select both bots.', 'error');
-          return;
+ async function populateBots() {
+  try {
+    const response = await fetch('/api/bots');
+    const bots = await response.json();
+    const bot1Select = document.getElementById('bot1-select');
+    const bot2Select = document.getElementById('bot2-select');
+    bot1Select.innerHTML = '<option value="">Select a bot...</option>';
+    bot2Select.innerHTML = '<option value="">Select a bot...</option>';
+    bots.forEach(bot => {
+      const option = document.createElement('option');
+      option.value = bot.id;
+      option.textContent = `${bot.botName} (${bot.username}) - ${bot.points} pts`;
+      bot1Select.appendChild(option.cloneNode(true));
+      bot2Select.appendChild(option.cloneNode(true));
+    });
+  } catch (error) {
+    console.error('Error populating bots:', error);
+    showNotification('Failed to load bots. Check console.', 'error');
+  }
+}
+
+async function startGame() {
+  console.log('startGame called');
+  const bot1Id = document.getElementById('bot1-select').value;
+  const bot2Id = document.getElementById('bot2-select').value;
+  if (!bot1Id || !bot2Id) {
+    showNotification('Please select both bots.', 'error');
+    return;
+  }
+
+  const startButton = document.getElementById('start');
+  startButton.disabled = true;
+  showNotification('Game starting...', 'info');
+
+  try {
+    const response = await fetch('/api/play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `bot1Id=${bot1Id}&bot2Id=${bot2Id}`
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const result = await response.json();
+    console.log('Game result:', result);
+    if (result.error) throw new Error(result.error);
+    let i = 0;
+    let bot1Total = 0, bot2Total = 0;
+    gameInterval = setInterval(() => {
+      if (i >= result.results.length) {
+        clearInterval(gameInterval);
+        showNotification(`Game Over! Bot 1: ${bot1Total}, Bot 2: ${bot2Total}`, 'success');
+        startButton.disabled = false;
+        return;
       }
-  
-      const startButton = document.getElementById('start');
-      startButton.disabled = true;
-      showNotification('Game starting...', 'info');
-  
-      try {
-          const response = await fetch('/api/play.php', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: `bot1Id=${bot1Id}&bot2Id=${bot2Id}`
-          });
-          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-          const result = await response.json();
-          console.log('Game result:', result);
-          if (result.error) throw new Error(result.error);
-          let i = 0;
-          let bot1Total = 0, bot2Total = 0;
-          gameInterval = setInterval(() => {
-              if (i >= result.results.length) {
-                  clearInterval(gameInterval);
-                  showNotification(`Game Over! Bot 1: ${bot1Total}, Bot 2: ${bot2Total}`, 'success');
-                  startButton.disabled = false;
-                  return;
-              }
-              const roundResult = result.results[i];
-              const [bot1Points, bot2Points] = calculateRoundPoints(roundResult.bot1Choice, roundResult.bot2Choice);
-              bot1Total += bot1Points;
-              bot2Total += bot2Points;
-              document.getElementById('bot1-points').textContent = bot1Total;
-              document.getElementById('bot2-points').textContent = bot2Total;
-              const circle1 = document.getElementById(`bot1-round${i + 1}`);
-              const circle2 = document.getElementById(`bot2-round${i + 1}`);
-              circle1.classList.add(roundResult.bot1Choice, 'show');
-              circle2.classList.add(roundResult.bot2Choice, 'show');
-              document.getElementById('round-display').innerHTML += `
-                  Round ${i + 1}: Bot 1 - ${roundResult.bot1Choice} (${bot1Total}), Bot 2 - ${roundResult.bot2Choice} (${bot2Total})<br>
-              `;
-              i++;
-          }, 800);
-      } catch (error) {
-          console.error('Game start error:', error);
-          showNotification(`Failed to start game: ${error.message}. Check console.`, 'error');
-          startButton.disabled = false;
-      }
-    }
+      const roundResult = result.results[i];
+      const [bot1Points, bot2Points] = calculateRoundPoints(roundResult.bot1Choice, roundResult.bot2Choice);
+      bot1Total += bot1Points;
+      bot2Total += bot2Points;
+      document.getElementById('bot1-points').textContent = bot1Total;
+      document.getElementById('bot2-points').textContent = bot2Total;
+      const circle1 = document.getElementById(`bot1-round${i + 1}`);
+      const circle2 = document.getElementById(`bot2-round${i + 1}`);
+      circle1.classList.add(roundResult.bot1Choice, 'show');
+      circle2.classList.add(roundResult.bot2Choice, 'show');
+      document.getElementById('round-display').innerHTML += `
+        Round ${i + 1}: Bot 1 - ${roundResult.bot1Choice} (${bot1Total}), Bot 2 - ${roundResult.bot2Choice} (${bot2Total})<br>
+      `;
+      i++;
+    }, 800);
+  } catch (error) {
+    console.error('Game start error:', error);
+    showNotification(`Failed to start game: ${error.message}. Check console.`, 'error');
+    startButton.disabled = false;
+  }
+}
 
     function calculateRoundPoints(choice1, choice2) {
       if (choice1 === 'steal' && choice2 === 'stay') return [8, 0];
