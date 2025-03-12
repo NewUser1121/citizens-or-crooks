@@ -159,7 +159,7 @@
         const response = await fetch(`/api/bots/${currentBotId}`);
         const bot = await response.json();
         console.log('Loaded bot:', bot);
-        document.getElementById('bot-name').value = bot.botname || '';
+        document.getElementById('bot-name').value = bot.botname || ''; // Use lowercase botname
         document.getElementById('bot-code').value = bot.code || '';
       } catch (error) {
         console.error('Error loading bot:', error);
