@@ -1,6 +1,6 @@
 const express = require('express');
 const { Client } = require('pg');
-const path = require('path'); // Add this for file path handling
+const path = require('path');
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -36,6 +36,7 @@ async function startServer() {
   }
 
   // API Routes
+  // Get all bots
   app.get('/api/bots', async (req, res) => {
     try {
       const result = await client.query('SELECT id, botName, username, points FROM bots');
@@ -45,6 +46,25 @@ async function startServer() {
     }
   });
 
+  // Add a new bot
+  app.post('/api/bots', async (req, res) => {
+    const { botName, username, code } = req.body;
+    if (!botName || !username) {
+      return res.status(400).json({ error: 'botName and username are required' });
+    }
+    try {
+      const result = await client.query(
+        'INSERT INTO bots (botName, username, code) VALUES ($1, $2, $3) RETURNING *',
+        [botName, username, code || '']
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      console.error('Error saving bot:', err.stack);
+      res.status(500).json({ error: 'Failed to save bot' });
+    }
+  });
+
+  // Play a game between two bots
   app.post('/api/play', async (req, res) => {
     const { bot1Id, bot2Id } = req.body;
     try {
@@ -86,9 +106,9 @@ async function startServer() {
     }
   });
 
-  // Default route to serve play-game.html
+  // Default route to serve index.html (homepage)
   app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'play-game.html'));
+    res.sendFile(path.join(__dirname, 'index.html'));
   });
 
   function interpretBotCode(code, opponentHistory, round) {
