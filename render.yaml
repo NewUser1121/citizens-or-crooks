@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: citizens-or-crooks
+    env: static
+    build:
+      staticDir: /
+    routes:
+      - type: rewrite
+        source: /api/play
+        destination: /functions/play.js
+      - type: rewrite
+        source: /api/bots
+        destination: /functions/bots.js
+  - type: web
+    name: api
+    env: node
+    build:
+      command: npm install
+    startCommand: node functions/play.js
+    envVars:
+      - key: NODE_VERSION
+        value: "18"
+databases:
+  - name: citizens_db
+    databaseName: citizens_db
+    user: citizens_user
+    plan: free
