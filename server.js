@@ -24,7 +24,7 @@ async function startServer() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS bots (
         id SERIAL PRIMARY KEY,
-        botName TEXT NOT NULL,
+        botname TEXT NOT NULL,  -- Changed to lowercase to match existing schema
         username TEXT NOT NULL,
         points INTEGER DEFAULT 0,
         code TEXT DEFAULT ''
@@ -40,7 +40,7 @@ async function startServer() {
   app.get('/api/bots', async (req, res) => {
     try {
       const username = req.query.username;
-      let query = 'SELECT id AS id, "botName" AS botName, username AS username, points AS points FROM bots'; // Explicit column names
+      let query = 'SELECT id AS id, botname AS botname, username AS username, points AS points FROM bots'; // Use lowercase botname
       let params = [];
       if (username) {
         query += ' WHERE username = $1';
@@ -50,7 +50,7 @@ async function startServer() {
       // Debug log with exact field names
       const debugRows = result.rows.map(row => ({
         id: row.id,
-        botName: row.botName, // Ensure correct field name
+        botname: row.botname, // Use lowercase botname
         username: row.username,
         points: row.points
       }));
@@ -86,7 +86,7 @@ async function startServer() {
     }
     try {
       const result = await client.query(
-        'INSERT INTO bots (botName, username, code) VALUES ($1, $2, $3) RETURNING *',
+        'INSERT INTO bots (botname, username, code) VALUES ($1, $2, $3) RETURNING *', // Use lowercase botname
         [botName.trim(), username.trim(), code || '']
       );
       console.log('Bot created successfully:', result.rows[0]);
@@ -107,7 +107,7 @@ async function startServer() {
     }
     try {
       const result = await client.query(
-        'UPDATE bots SET botName = $1, username = $2, code = $3 WHERE id = $4 RETURNING *',
+        'UPDATE bots SET botname = $1, username = $2, code = $3 WHERE id = $4 RETURNING *', // Use lowercase botname
         [botName.trim(), username.trim(), code || '', id]
       );
       if (result.rows.length === 0) {
