@@ -4,16 +4,18 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Debug log for DATABASE_URL
+console.log('DATABASE_URL:', process.env.DATABASE_URL);
+
 const client = new Client({
-  connectionString: process.env.DATABASE_URL, // Render will provide this
-  ssl: { rejectUnauthorized: false }, // Required for Render’s Postgres
+  connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/citizens_db', // Fallback for local testing
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false, // SSL only for Render
 });
 
 async function startServer() {
   try {
     await client.connect();
     console.log('Connected to PostgreSQL');
-    // Create bots table if it doesn’t exist
     await client.query(`
       CREATE TABLE IF NOT EXISTS bots (
         id SERIAL PRIMARY KEY,
@@ -25,6 +27,7 @@ async function startServer() {
     `);
   } catch (err) {
     console.error('Database connection error:', err.stack);
+    process.exit(1); // Exit if connection fails
   }
 
   app.get('/api/bots', async (req, res) => {
@@ -89,7 +92,7 @@ async function startServer() {
     return Math.random() > 0.5 ? 'steal' : 'stay';
   }
 
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 10000;
   app.listen(port, () => {
     console.log(`Server running on port ${port}`);
   });
