@@ -263,7 +263,7 @@
         const result = await response.json();
         console.log('Save result:', result);
         if (response.ok) {
-          showNotification('Bot saved successfully!', 'success'); // Ensure notification triggers
+          showNotification('Bot saved successfully!', 'success');
           currentBotId = result.id || currentBotId;
           populateBots();
         } else {
@@ -381,36 +381,38 @@
       const lines = code.split('\n');
       let behavior = '';
       let block = '';
-      let ifContext = null;
+      let startLine = 0;
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line && !line.startsWith('//')) {
           block += line + '\n';
-          if (line.endsWith(';')) {
+          if (line.endsWith(';') || i === lines.length - 1) {
             // Validate the accumulated block
             const blockLines = block.trim().split('\n').map(l => l.trim()).filter(l => l && !l.endsWith(';'));
             let validBlock = true;
             let blockBehavior = '';
+            let hasIf = false;
 
             for (let j = 0; j < blockLines.length; j++) {
               const currentLine = blockLines[j];
+              const lineNum = startLine + j + 1;
               if (currentLine.startsWith('if ')) {
+                hasIf = true;
                 if (!currentLine.match(/^if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?$/i)) {
-                  errors.push(`Line ${i - blockLines.length + j + 1}: Invalid if statement syntax`);
+                  errors.push(`Line ${lineNum}: Invalid if statement syntax`);
                   validBlock = false;
                 } else {
                   const condition = currentLine.match(/(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?)/)[0];
                   const thenAction = currentLine.match(/then (steal|stay|\d+% to (steal|stay))/)[1];
                   const elseAction = currentLine.match(/else (steal|stay|\d+% to (steal|stay))/) ? currentLine.match(/else (steal|stay|\d+% to (steal|stay))/)[1] : null;
                   blockBehavior += `Bot will ${thenAction} if ${condition}${elseAction ? ', else ' + elseAction : ''}.\n`;
-                  ifContext = null;
                 }
-              } else if (currentLine.startsWith('else ') && !ifContext) {
-                errors.push(`Line ${i - blockLines.length + j + 1}: 'else' must follow an 'if' statement within the block`);
+              } else if (currentLine.startsWith('else ') && !hasIf) {
+                errors.push(`Line ${lineNum}: 'else' must follow an 'if' statement within the block`);
                 validBlock = false;
               } else if (!currentLine.match(/^(steal|stay|\d+% to (steal|stay)|if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?)$/)) {
-                errors.push(`Line ${i - blockLines.length + j + 1}: Invalid command`);
+                errors.push(`Line ${lineNum}: Invalid command`);
                 validBlock = false;
               } else if (!currentLine.startsWith('if ')) {
                 if (currentLine === 'steal') blockBehavior += 'Bot will always steal.\n';
@@ -426,49 +428,9 @@
             if (validBlock && blockBehavior) {
               behavior += blockBehavior;
             }
-            block = ''; // Reset block after processing
+            block = '';
+            startLine = i + 1;
           }
-        }
-      }
-
-      // Handle any remaining block without ;
-      if (block.trim()) {
-        const blockLines = block.trim().split('\n').map(l => l.trim()).filter(l => l);
-        let validBlock = true;
-        let blockBehavior = '';
-
-        for (let j = 0; j < blockLines.length; j++) {
-          const currentLine = blockLines[j];
-          if (currentLine.startsWith('if ')) {
-            if (!currentLine.match(/^if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?$/i)) {
-              errors.push(`Line ${lines.length - blockLines.length + j + 1}: Invalid if statement syntax`);
-              validBlock = false;
-            } else {
-              const condition = currentLine.match(/(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?)/)[0];
-              const thenAction = currentLine.match(/then (steal|stay|\d+% to (steal|stay))/)[1];
-              const elseAction = currentLine.match(/else (steal|stay|\d+% to (steal|stay))/) ? currentLine.match(/else (steal|stay|\d+% to (steal|stay))/)[1] : null;
-              blockBehavior += `Bot will ${thenAction} if ${condition}${elseAction ? ', else ' + elseAction : ''}.\n';
-              ifContext = null;
-            }
-          } else if (currentLine.startsWith('else ') && !ifContext) {
-            errors.push(`Line ${lines.length - blockLines.length + j + 1}: 'else' must follow an 'if' statement within the block`);
-            validBlock = false;
-          } else if (!currentLine.match(/^(steal|stay|\d+% to (steal|stay)|if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?)$/)) {
-            errors.push(`Line ${lines.length - blockLines.length + j + 1}: Invalid command`);
-            validBlock = false;
-          } else if (!currentLine.startsWith('if ')) {
-            if (currentLine === 'steal') blockBehavior += 'Bot will always steal.\n';
-            else if (currentLine === 'stay') blockBehavior += 'Bot will always stay.\n';
-            else if (currentLine.match(/^\d+% to (steal|stay)/)) {
-              const percent = parseInt(currentLine.match(/^\d+/)[0]);
-              const action = currentLine.includes('steal') ? 'steal' : 'stay';
-              blockBehavior += `Bot has ${percent}% chance to ${action}, ${100 - percent}% to ${action === 'steal' ? 'stay' : 'steal'}.\n';
-            }
-          }
-        }
-
-        if (validBlock && blockBehavior) {
-          behavior += blockBehavior;
         }
       }
 
