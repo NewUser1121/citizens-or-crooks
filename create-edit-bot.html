@@ -393,75 +393,118 @@
       const lines = code.split('\n');
       let behavior = '';
       const ifStack = []; // Stack to track nested if contexts
-      let nestedLevel = 0; // Track nesting level for behavior formatting
 
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line && !line.startsWith('//')) {
-          // Match 'if' statements with optional arithmetic in conditions
-          if (line.startsWith('if ') || line.startsWith('else if ')) {
-            // Adjusted regex to handle nested structures
-            if (!line.match(/^((else )?if) (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( (>|<) (\d+|\d+\s*\*\s*\(round_number\s*-\s*\d+\))?)?) then (steal|stay|\d+% to (steal|stay))$/i)) {
-              errors.push(`Line ${i + 1}: Invalid if statement syntax`);
-            } else {
-              const isElseIf = line.startsWith('else if ');
-              if (isElseIf && ifStack.length === 0) {
-                errors.push(`Line ${i + 1}: 'else if' must follow an 'if' statement`);
-              } else {
-                const condition = line.match(/(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( (>|<) (\d+|\d+\s*\*\s*\(round_number\s*-\s*\d+\))?)?)/)[0];
-                const thenAction = line.match(/then (steal|stay|\d+% to (steal|stay))/)[1];
-                ifStack.push({ condition, thenAction, line: i + 1, nestedLevel });
-                behavior += `${'  '.repeat(nestedLevel)}Bot will ${thenAction} if ${condition}`;
-              }
+      const conditionRegex = /^(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( (>|<) (\d+|\d+\s*\*\s*\(round_number\s*-\s*\d+\))?)?)$/i;
+      const actionRegex = /^(steal|stay|\d+% to (steal|stay))$/i;
+
+      function parseBlock(startIndex, indentLevel = 0) {
+        let currentIndex = startIndex;
+        let blockBehavior = '';
+        let nestedIfStarted = false;
+
+        while (currentIndex < lines.length) {
+          const line = lines[currentIndex].trim();
+          if (!line || line.startsWith('//')) {
+            currentIndex++;
+            continue;
+          }
+
+          console.log(`Parsing line ${currentIndex + 1}: ${line}`);
+
+          // Handle 'if' or 'else if'
+          if (line.startsWith('if ') || (line.startsWith('else if ') && ifStack.length > 0)) {
+            const isElseIf = line.startsWith('else if ');
+            const ifMatch = line.match(/^((else )?if) (.+) then (.+)$/);
+            if (!ifMatch) {
+              errors.push(`Line ${currentIndex + 1}: Invalid if statement syntax`);
+              return { index: currentIndex, behavior: blockBehavior };
             }
-          } else if (line.startsWith('else ')) {
-            if (ifStack.length === 0) {
-              errors.push(`Line ${i + 1}: 'else' must follow an 'if' or 'else if' statement`);
-            } else if (line.match(/^else (steal|stay|\d+% to (steal|stay))$/)) {
-              const elseAction = line.match(/else (steal|stay|\d+% to (steal|stay))/)[1];
-              const currentContext = ifStack[ifStack.length - 1];
-              behavior += `, else ${elseAction}.\n`;
-              nestedLevel = currentContext.nestedLevel;
-              ifStack.pop(); // Close the current if context
-            } else {
-              errors.push(`Line ${i + 1}: Invalid else statement syntax`);
+
+            const condition = ifMatch[3];
+            let action = ifMatch[4];
+
+            if (!conditionRegex.test(condition)) {
+              errors.push(`Line ${currentIndex + 1}: Invalid condition: ${condition}`);
+              return { index: currentIndex, behavior: blockBehavior };
             }
-          } else if (line === 'else') {
-            if (ifStack.length === 0) {
-              errors.push(`Line ${i + 1}: 'else' must follow an 'if' or 'else if' statement`);
+
+            ifStack.push({ line: currentIndex + 1, indentLevel });
+            blockBehavior += `${'  '.repeat(indentLevel)}Bot will `;
+            
+            // Check if the action is another if statement
+            if (action.startsWith('if ')) {
+              nestedIfStarted = true;
+              const nestedResult = parseBlock(currentIndex, indentLevel + 1);
+              blockBehavior += `if ${condition} then:\n${nestedResult.behavior}`;
+              currentIndex = nestedResult.index;
+            } else if (actionRegex.test(action)) {
+              blockBehavior += `${action} if ${condition}`;
+              currentIndex++;
             } else {
-              const currentContext = ifStack[ifStack.length - 1];
-              behavior += `, else:\n`;
-              nestedLevel = currentContext.nestedLevel + 1; // Increase nesting level for the block
+              errors.push(`Line ${currentIndex + 1}: Invalid action after then: ${action}`);
+              return { index: currentIndex, behavior: blockBehavior };
             }
-          } else if (line.match(/^(steal|stay|\d+% to (steal|stay))$/)) {
+          }
+          // Handle 'else'
+          else if (line === 'else' && ifStack.length > 0) {
+            blockBehavior += `${'  '.repeat(indentLevel)}, else:\n`;
+            currentIndex++;
+            const nestedResult = parseBlock(currentIndex, indentLevel + 1);
+            blockBehavior += nestedResult.behavior;
+            currentIndex = nestedResult.index;
+            if (!nestedIfStarted) {
+              ifStack.pop(); // Close the current if context if no nested if was started
+            }
+            nestedIfStarted = false;
+          }
+          // Handle 'else' with direct action
+          else if (line.startsWith('else ') && ifStack.length > 0) {
+            const elseMatch = line.match(/^else (.+)$/);
+            if (!elseMatch || !actionRegex.test(elseMatch[1])) {
+              errors.push(`Line ${currentIndex + 1}: Invalid else statement syntax`);
+              return { index: currentIndex, behavior: blockBehavior };
+            }
+            const elseAction = elseMatch[1];
+            blockBehavior += `${'  '.repeat(indentLevel)}, else ${elseAction}.\n`;
+            ifStack.pop();
+            currentIndex++;
+            nestedIfStarted = false;
+          }
+          // Handle standalone actions
+          else if (actionRegex.test(line)) {
             if (ifStack.length > 0) {
-              // If inside an else block, treat this as the action for the last else
-              const currentContext = ifStack[ifStack.length - 1];
-              if (line === 'steal') behavior += `${'  '.repeat(nestedLevel)}Bot will always steal.\n`;
-              else if (line === 'stay') behavior += `${'  '.repeat(nestedLevel)}Bot will always stay.\n`;
-              else if (line.match(/^\d+% to (steal|stay)/)) {
+              if (line === 'steal') blockBehavior += `${'  '.repeat(indentLevel)}Bot will always steal.\n`;
+              else if (line === 'stay') blockBehavior += `${'  '.repeat(indentLevel)}Bot will always stay.\n`;
+              else {
                 const percent = parseInt(line.match(/^\d+/)[0]);
                 const action = line.includes('steal') ? 'steal' : 'stay';
-                behavior += `${'  '.repeat(nestedLevel)}Bot has ${percent}% chance to ${action}, ${100 - percent}% to ${action === 'steal' ? 'stay' : 'steal'}.\n`;
+                blockBehavior += `${'  '.repeat(indentLevel)}Bot has ${percent}% chance to ${action}, ${100 - percent}% to ${action === 'steal' ? 'stay' : 'steal'}.\n`;
               }
-              nestedLevel = currentContext.nestedLevel; // Reset nesting level after block
-              ifStack.pop(); // Close the current if context
+              ifStack.pop();
+              currentIndex++;
             } else {
-              // Standalone action
-              if (line === 'steal') behavior += 'Bot will always steal.\n';
-              else if (line === 'stay') behavior += 'Bot will always stay.\n';
-              else if (line.match(/^\d+% to (steal|stay)/)) {
+              if (line === 'steal') blockBehavior += 'Bot will always steal.\n';
+              else if (line === 'stay') blockBehavior += 'Bot will always stay.\n';
+              else {
                 const percent = parseInt(line.match(/^\d+/)[0]);
                 const action = line.includes('steal') ? 'steal' : 'stay';
-                behavior += `Bot has ${percent}% chance to ${action}, ${100 - percent}% to ${action === 'steal' ? 'stay' : 'steal'}.\n`;
+                blockBehavior += `Bot has ${percent}% chance to ${action}, ${100 - percent}% to ${action === 'steal' ? 'stay' : 'steal'}.\n`;
               }
+              currentIndex++;
             }
-          } else {
-            errors.push(`Line ${i + 1}: Invalid command`);
+            nestedIfStarted = false;
+          }
+          else {
+            errors.push(`Line ${currentIndex + 1}: Invalid command`);
+            return { index: currentIndex, behavior: blockBehavior };
           }
         }
+
+        return { index: currentIndex, behavior: blockBehavior };
       }
+
+      const result = parseBlock(0);
+      behavior = result.behavior;
 
       // Check for unclosed if statements
       if (ifStack.length > 0) {
