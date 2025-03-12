@@ -1,8 +1,12 @@
 const express = require('express');
 const { Client } = require('pg');
+const path = require('path'); // Add this for file path handling
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from the root directory
+app.use(express.static(path.join(__dirname)));
 
 // Debug log for DATABASE_URL
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
@@ -31,6 +35,7 @@ async function startServer() {
     process.exit(1);
   }
 
+  // API Routes
   app.get('/api/bots', async (req, res) => {
     try {
       const result = await client.query('SELECT id, botName, username, points FROM bots');
@@ -79,6 +84,11 @@ async function startServer() {
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
+  });
+
+  // Default route to serve play-game.html
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'play-game.html'));
   });
 
   function interpretBotCode(code, opponentHistory, round) {
