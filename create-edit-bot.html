@@ -54,8 +54,8 @@
       outline: none;
       transition: border-color 0.3s ease;
     }
-    .bot-name-input[contenteditable="true"],
-    .username-input[contenteditable="true"] {
+    .bot-name-input:not([disabled]),
+    .username-input:not([disabled]) {
       border: 2px solid #3a6bb8;
       background-color: #2e5a9e;
     }
@@ -214,12 +214,14 @@
           if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
           const bot = await response.json();
           if (bot) {
-            document.querySelector('.bot-name-input').value = bot.botName || '(Bot name)';
-            document.querySelector('.username-input').value = bot.username || '(Username)';
+            const botNameInput = document.querySelector('.bot-name-input');
+            const usernameInput = document.querySelector('.username-input');
+            botNameInput.value = bot.botName || '(Bot name)';
+            usernameInput.value = bot.username || '(Username)';
             document.querySelector('#code-area').value = bot.code || '';
             updateLineNumbers();
             validateCode();
-            showNotification(`Loaded bot: ${bot.botName}`);
+            showNotification(`Loaded bot: ${bot.botName || 'Unnamed Bot'}`);
           } else {
             showNotification('Bot not found.', 'error');
           }
@@ -252,10 +254,16 @@
         usernameInput.style.border = '2px solid #3a6bb8';
         codeArea.style.border = '2px solid #3a6bb8';
         botNameInput.focus();
+        // Clear placeholder text when entering edit mode
+        if (botNameInput.value === '(Bot name)') botNameInput.value = '';
+        if (usernameInput.value === '(Username)') usernameInput.value = '';
       } else {
         botNameInput.style.border = 'none';
         usernameInput.style.border = 'none';
         codeArea.style.border = 'none';
+        // Restore placeholder if empty
+        if (!botNameInput.value.trim()) botNameInput.value = '(Bot name)';
+        if (!usernameInput.value.trim()) usernameInput.value = '(Username)';
       }
     }
 
@@ -271,9 +279,9 @@
           } else if (bots.length === 1) {
             window.location.href = `/create-edit-bot.html?id=${bots[0].id}`;
           } else {
-            const botNames = bots.map(bot => bot.botName || 'Unnamed').join(', ');
+            const botNames = bots.map(bot => bot.botName || 'Unnamed Bot').join(', ');
             const choice = prompt(`Choose a bot: ${botNames}`);
-            const selectedBot = bots.find(bot => (bot.botName || 'Unnamed') === choice);
+            const selectedBot = bots.find(bot => (bot.botName || 'Unnamed Bot') === choice);
             if (selectedBot) {
               window.location.href = `/create-edit-bot.html?id=${selectedBot.id}`;
             } else {
@@ -292,19 +300,27 @@
       const usernameInput = document.querySelector('.username-input');
       const code = document.querySelector('#code-area').value.trim();
 
-      // Debug: Log the raw and value
+      // Debug: Log the raw values
       console.log('botName raw:', botNameInput.value);
       console.log('username raw:', usernameInput.value);
+      console.log('code raw:', code);
 
-      const botName = botNameInput.value.trim() || 'Unnamed Bot';
+      let botName = botNameInput.value.trim();
       const username = usernameInput.value.trim();
 
-      if (!botName || !username || botName === '(Bot name)' || username === '(Username)' || botName === '' || username === '') {
-        showNotification('Please enter valid bot name and username (no empty values).', 'error');
+      // Fallback for botName
+      if (!botName || botName === '(Bot name)') {
+        botName = 'Unnamed Bot';
+      }
+
+      if (!username || username === '(Username)') {
+        showNotification('Please enter a valid username.', 'error');
         return;
       }
 
       const botData = { botName, username, code };
+      console.log('botData to send:', botData); // Debug: Log the payload
+
       const url = currentBotId ? `/api/bots/${currentBotId}` : '/api/bots';
       const method = currentBotId ? 'PUT' : 'POST';
 
