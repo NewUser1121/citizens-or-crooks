@@ -176,6 +176,25 @@
   <script>
     let currentBotId = null;
 
+    // Show notification
+    function showNotification(message, type) {
+      const notification = document.getElementById('notification');
+      notification.textContent = message;
+      notification.style.display = 'block';
+      // Adjust background color based on type
+      if (type === 'success') {
+        notification.style.backgroundColor = '#28a745'; // Green for success
+      } else if (type === 'error') {
+        notification.style.backgroundColor = '#dc3545'; // Red for error
+      } else if (type === 'info') {
+        notification.style.backgroundColor = '#17a2b8'; // Cyan for info
+      }
+      // Hide after animation (3 seconds)
+      setTimeout(() => {
+        notification.style.display = 'none';
+      }, 3000);
+    }
+
     // Get URL parameter
     function getParameterByName(name, url) {
       if (!url) url = window.location.href;
@@ -317,13 +336,13 @@
     function loadExample(example) {
       switch (example) {
         case 'steal':
-          document.getElementById('bot-code').value = 'steal'; // Removed semicolon
+          document.getElementById('bot-code').value = 'steal';
           break;
         case 'stay':
-          document.getElementById('bot-code').value = 'stay'; // Removed semicolon
+          document.getElementById('bot-code').value = 'stay';
           break;
         case 'random':
-          document.getElementById('bot-code').value = '70% to steal'; // Removed semicolon
+          document.getElementById('bot-code').value = '70% to steal';
           break;
         case 'copyOpponent':
           document.getElementById('bot-code').value = 'if opponent_last_steal then steal\nelse stay;';
