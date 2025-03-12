@@ -10,104 +10,53 @@
       background: #1e3c72;
       font-family: 'Arial', sans-serif;
       color: #d4d4d4;
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
     }
     .container {
       padding: 40px;
-      max-width: 1000px;
-      width: 100%;
+      text-align: center;
     }
-    .button-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-      margin-bottom: 25px;
-      justify-content: center;
+    .bot-section {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #2a5298;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    .form-group {
+      margin-bottom: 15px;
     }
     .btn {
       border-radius: 20px;
-      padding: 10px 20px;
-      background-color: #2a5298;
+      padding: 12px 25px;
+      margin: 5px;
+      background-color: #3a6bb8;
       border: none;
       color: #d4d4d4;
-      transition: background-color 0.3s ease, transform 0.3s ease;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
     }
     .btn:hover {
-      background-color: #3a6bb8;
-      transform: translateY(-2px);
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      background-color: #4d7cce;
     }
-    .btn:disabled {
-      background-color: #444;
-      cursor: not-allowed;
-    }
-    .bot-name-input, .username-input {
-      padding: 10px;
-      font-size: 1.1em;
-      border: none;
-      min-width: 180px;
-      text-align: center;
-      background-color: #2a5298;
-      color: #d4d4d4;
+    select {
+      width: 100%;
+      padding: 5px;
       border-radius: 10px;
-      outline: none;
-      transition: border-color 0.3s ease;
-    }
-    .bot-name-input:not([disabled]),
-    .username-input:not([disabled]) {
-      border: 2px solid #3a6bb8;
-      background-color: #2e5a9e;
-    }
-    .code-editor {
+      background-color: #1e3c72;
+      color: #d4d4d4;
       border: 1px solid #3a6bb8;
-      border-radius: 10px;
-      padding: 20px;
-      height: 500px;
-      display: flex;
-      background: #1e3c72;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-      position: relative;
-      margin-bottom: 20px;
     }
-    .line-numbers {
-      width: 50px;
-      text-align: right;
-      padding-right: 15px;
-      color: #888;
-      background: #1e3c72;
-      border-right: 1px solid #3a6bb8;
-      font-family: 'Consolas', monospace;
-    }
-    .code-area {
-      flex-grow: 1;
-      border: none;
-      resize: none;
-      outline: none;
-      background: #1e3c72;
-      color: #d4d4d4;
-      font-family: 'Consolas', monospace;
-      line-height: 1.6;
-      font-size: 1em;
+    textarea {
+      width: 100%;
+      height: 200px;
       padding: 10px;
-    }
-    .code-area::selection {
-      background: #3a6bb8;
-      color: #fff;
-    }
-    .console {
-      border: 1px solid #3a6bb8;
       border-radius: 10px;
-      padding: 15px;
-      background: #1e3c72;
+      background-color: #1e3c72;
       color: #d4d4d4;
-      max-height: 200px;
-      overflow-y: auto;
-      margin-bottom: 20px;
-    }
-    .console-header {
-      font-weight: bold;
-      margin-bottom: 10px;
+      border: 1px solid #3a6bb8;
+      resize: vertical;
     }
     .notification {
       position: fixed;
@@ -123,462 +72,201 @@
       animation: fadeInOut 3s ease;
     }
     @keyframes fadeInOut {
-      0% { opacity: 0; transform: translateY(-20px); }
-      10% { opacity: 1; transform: translateY(0); }
-      90% { opacity: 1; transform: translateY(0); }
-      100% { opacity: 0; transform: translateY(-20px); }
-    }
-    .tooltip {
-      position: relative;
-      display: inline-block;
-    }
-    .tooltip .tooltiptext {
-      visibility: hidden;
-      width: 200px;
-      background-color: #333;
-      color: #fff;
-      text-align: center;
-      border-radius: 6px;
-      padding: 5px;
-      position: absolute;
-      z-index: 1;
-      bottom: 125%;
-      left: 50%;
-      margin-left: -100px;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    .tooltip:hover .tooltiptext {
-      visibility: visible;
-      opacity: 1;
+      0%, 100% { opacity: 0; transform: translateY(-20px); }
+      10%, 90% { opacity: 1; transform: translateY(0); }
     }
     @media (max-width: 768px) {
-      .button-row { flex-direction: column; align-items: center; }
-      .code-editor { height: 350px; }
-      .btn, .bot-name-input, .username-input { font-size: 0.95rem; }
       .notification { top: 10px; right: 10px; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="button-row">
-      <button class="btn" id="save-btn" onclick="saveBot()">Save</button>
-      <button class="btn" id="edit-btn" onclick="toggleEditMode()">Edit</button>
-      <input type="text" class="bot-name-input" value="(Bot name)" disabled>
-      <input type="text" class="username-input" value="(Username)" disabled>
-      <button class="btn" onclick="openBot()">Open</button>
-      <button class="btn" onclick="testBot()">Test</button>
-      <select class="form-control examples-dropdown" onchange="applyExample(this.value)">
-        <option value="">Examples ▼</option>
-        <option value="example: 1">example: 1</option>
-        <option value="example: 2">example: 2</option>
-        <option value="example: 3">example: 3</option>
-        <option value="example: 4">example: 4</option>
-        <option value="example: 5">example: 5</option>
-      </select>
-      <button class="btn" onclick="deleteBot()">Delete</button>
-      <div class="tooltip">
-        <button class="btn" onclick="showCommands()">Commands</button>
-        <span class="tooltiptext">View available coding commands</span>
+    <div class="bot-section">
+      <h2>Create/Edit Bot</h2>
+      <div class="form-group">
+        <label for="username">Username:</label>
+        <input type="text" id="username" class="form-control" placeholder="Enter username">
       </div>
-      <button class="btn" onclick="showWhatIsThis()">What Is This</button>
+      <div class="form-group">
+        <label for="bot-select">Select a Bot:</label>
+        <select id="bot-select" class="form-control" onchange="loadBot()">
+          <option value="">Choose a bot...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="bot-name">Bot Name:</label>
+        <input type="text" id="bot-name" class="form-control" placeholder="Enter bot name">
+      </div>
+      <div class="form-group">
+        <label for="bot-code">Bot Code:</label>
+        <textarea id="bot-code" class="form-control" placeholder="Enter bot code (e.g., 'steal' or 'stay')"></textarea>
+      </div>
+      <button class="btn" onclick="saveBot()">Save</button>
+      <button class="btn" onclick="done()">Done</button>
+      <button class="btn" onclick="openFile()">Open</button>
+      <button class="btn" onclick="testBot()">Test</button>
+      <div id="examples" class="dropdown">
+        <button class="btn dropdown-toggle" type="button" id="examples-btn" data-bs-toggle="dropdown" aria-expanded="false">Examples</button>
+        <ul class="dropdown-menu" aria-labelledby="examples-btn">
+          <li><a class="dropdown-item" href="#" onclick="loadExample('steal')">Always Steal</a></li>
+          <li><a class="dropdown-item" href="#" onclick="loadExample('stay')">Always Stay</a></li>
+          <li><a class="dropdown-item" href="#" onclick="loadExample('random')">Random Choice</a></li>
+        </ul>
+      </div>
+      <button class="btn" onclick="deleteBot()">Delete</button>
+      <button class="btn" onclick="whatIsThis()">What Is This</button>
+      <div id="notification" class="notification"></div>
     </div>
-
-    <div class="code-editor">
-      <div class="line-numbers" id="line-numbers"></div>
-      <textarea class="code-area" id="code-area" spellcheck="false" oninput="updateLineNumbers(); validateCode()"></textarea>
-    </div>
-
-    <div id="console" class="console" style="display: none;">
-      <div class="console-header">Console ▼</div>
-      <div id="console-content"></div>
-    </div>
-
-    <div id="notification" class="notification"></div>
-    <button class="btn mt-3" onclick="window.location.href='/index.html'">Back to Home</button>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    let editMode = false;
     let currentBotId = null;
-    let autoSaveTimeout = null;
 
-    async function fetchBot() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const botId = urlParams.get('id');
-      if (botId) {
-        currentBotId = botId;
-        try {
-          const response = await fetch(`/api/bots/${botId}`);
-          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-          const bot = await response.json();
-          if (bot) {
-            const botNameInput = document.querySelector('.bot-name-input');
-            const usernameInput = document.querySelector('.username-input');
-            botNameInput.value = bot.botName || '(Bot name)';
-            usernameInput.value = bot.username || '(Username)';
-            document.querySelector('#code-area').value = bot.code || '';
-            updateLineNumbers();
-            validateCode();
-            showNotification(`Loaded bot: ${bot.botName || 'Unnamed Bot'}`);
-          } else {
-            showNotification('Bot not found.', 'error');
-          }
-        } catch (error) {
-          console.error('Error fetching bot:', error);
-          showNotification('Failed to load bot. Check console.', 'error');
-        }
-      } else {
-        // Auto-enable edit mode for new bots
-        toggleEditMode();
+    async function populateBots() {
+      const username = document.getElementById('username').value.trim();
+      if (!username) {
+        showNotification('Please enter a username.', 'error');
+        return;
+      }
+      try {
+        const response = await fetch(`/api/bots?username=${encodeURIComponent(username)}`);
+        const bots = await response.json();
+        console.log('Fetched bots in create-edit:', bots);
+        const botSelect = document.getElementById('bot-select');
+        botSelect.innerHTML = '<option value="">Choose a bot...</option>';
+        bots.forEach(bot => {
+          const botName = bot.botname !== undefined ? bot.botname : 'Unnamed Bot'; // Use lowercase botname
+          console.log(`Bot ${bot.id} name for display:`, botName); // Debug
+          const option = document.createElement('option');
+          option.value = bot.id;
+          option.textContent = `${botName}`;
+          botSelect.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error fetching bots:', error);
+        showNotification('Failed to load bots. Check console.', 'error');
       }
     }
 
-    function updateLineNumbers() {
-      const codeArea = document.getElementById('code-area');
-      const lineNumbers = document.getElementById('line-numbers');
-      const lines = codeArea.value.split('\n').length;
-      lineNumbers.innerHTML = Array.from({ length: lines }, (_, i) => i + 1).join('<br>');
-    }
+    async function loadBot() {
+      const botSelect = document.getElementById('bot-select');
+      currentBotId = botSelect.value;
+      if (!currentBotId) return;
 
-    function toggleEditMode() {
-      editMode = !editMode;
-      const botNameInput = document.querySelector('.bot-name-input');
-      const usernameInput = document.querySelector('.username-input');
-      const codeArea = document.querySelector('#code-area');
-      const editBtn = document.getElementById('edit-btn');
-
-      botNameInput.disabled = !editMode;
-      usernameInput.disabled = !editMode;
-      codeArea.readOnly = !editMode;
-
-      if (editMode) {
-        botNameInput.style.border = '2px solid #3a6bb8';
-        usernameInput.style.border = '2px solid #3a6bb8';
-        codeArea.style.border = '2px solid #3a6bb8';
-        botNameInput.focus();
-        // Clear placeholder text when entering edit mode
-        if (botNameInput.value === '(Bot name)') botNameInput.value = '';
-        if (usernameInput.value === '(Username)') usernameInput.value = '';
-        editBtn.textContent = 'Done';
-      } else {
-        botNameInput.style.border = 'none';
-        usernameInput.style.border = 'none';
-        codeArea.style.border = 'none';
-        // Restore placeholder if empty
-        if (!botNameInput.value.trim()) botNameInput.value = '(Bot name)';
-        if (!usernameInput.value.trim()) usernameInput.value = '(Username)';
-        editBtn.textContent = 'Edit';
-      }
-    }
-
-    async function openBot() {
-      const username = prompt('Enter username:');
-      if (username) {
-        try {
-          const response = await fetch(`/api/bots?username=${encodeURIComponent(username)}`);
-          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-          const bots = await response.json();
-          if (bots.length === 0) {
-            alert('No bots found for that username.');
-          } else if (bots.length === 1) {
-            window.location.href = `/create-edit-bot.html?id=${bots[0].id}`;
-          } else {
-            const botNames = bots.map(bot => bot.botName || 'Unnamed Bot').join(', ');
-            const choice = prompt(`Choose a bot: ${botNames}`);
-            const selectedBot = bots.find(bot => (bot.botName || 'Unnamed Bot') === choice);
-            if (selectedBot) {
-              window.location.href = `/create-edit-bot.html?id=${selectedBot.id}`;
-            } else {
-              alert('Invalid choice.');
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching bots:', error);
-          showNotification('Failed to fetch bots. Check console.', 'error');
-        }
+      try {
+        const response = await fetch(`/api/bots/${currentBotId}`);
+        const bot = await response.json();
+        console.log('Loaded bot:', bot);
+        document.getElementById('bot-name').value = bot.botname || '';
+        document.getElementById('bot-code').value = bot.code || '';
+      } catch (error) {
+        console.error('Error loading bot:', error);
+        showNotification('Failed to load bot. Check console.', 'error');
       }
     }
 
     async function saveBot() {
-      const botNameInput = document.querySelector('.bot-name-input');
-      const usernameInput = document.querySelector('.username-input');
-      const code = document.querySelector('#code-area').value.trim();
-
-      // Real-time debug logging
-      console.log('botName input value before save:', botNameInput.value);
-      console.log('username input value before save:', usernameInput.value);
-      console.log('code input value before save:', code);
-
-      const botName = botNameInput.value.trim();
-      const username = usernameInput.value.trim();
-
-      // Validation
-      if (!botName || botName === '(Bot name)') {
-        showNotification('Please enter a valid bot name.', 'error');
-        return;
-      }
-      if (!username || username === '(Username)') {
-        showNotification('Please enter a valid username.', 'error');
+      const username = document.getElementById('username').value.trim();
+      const botName = document.getElementById('bot-name').value.trim();
+      const botCode = document.getElementById('bot-code').value.trim();
+      if (!username || !botName) {
+        showNotification('Username and bot name are required.', 'error');
         return;
       }
 
-      const botData = { botName, username, code };
-      console.log('botData to send:', botData); // Debug: Log the payload
-
-      const url = currentBotId ? `/api/bots/${currentBotId}` : '/api/bots';
-      const method = currentBotId ? 'PUT' : 'POST';
-
+      const botData = { botName, username, code: botCode };
       try {
-        document.getElementById('save-btn').disabled = true;
-        showNotification('Saving...', 'info');
+        const url = currentBotId ? `/api/bots/${currentBotId}` : '/api/bots';
+        const method = currentBotId ? 'PUT' : 'POST';
         const response = await fetch(url, {
           method: method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(botData),
+          body: JSON.stringify(botData)
         });
         const result = await response.json();
+        console.log('Save result:', result);
         if (response.ok) {
+          showNotification('Bot saved successfully!', 'success');
           currentBotId = result.id || currentBotId;
-          showNotification(`Bot ${currentBotId ? 'updated' : 'created'}! Saved as: ${botName}`, 'success');
-          setTimeout(() => window.location.href = '/view-bots.html', 2000);
+          populateBots();
         } else {
-          console.error('Server error:', result);
-          showNotification(`Error saving bot: ${result.error || 'Unknown error'}`, 'error');
+          showNotification(`Failed to save bot: ${result.error}`, 'error');
         }
       } catch (error) {
-        console.error('Fetch error:', error.message, { url, method, botData });
-        showNotification(`Failed to save bot: ${error.message}. Check console.`, 'error');
-      } finally {
-        document.getElementById('save-btn').disabled = false;
+        console.error('Error saving bot:', error);
+        showNotification('Failed to save bot. Check console.', 'error');
       }
     }
 
-    async function deleteBot() {
-      if (!currentBotId || !confirm('Are you sure you want to delete this bot?')) return;
-      try {
-        const response = await fetch(`/api/bots/${currentBotId}`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        const result = await response.json();
-        if (response.ok) {
-          showNotification('Bot deleted successfully!', 'success');
-          setTimeout(() => window.location.href = '/my-bots.html', 2000);
-        } else {
-          showNotification(`Error deleting bot: ${result.error}`, 'error');
-        }
-      } catch (error) {
-        console.error('Delete error:', error);
-        showNotification('Failed to delete bot. Check console.', 'error');
-      }
+    function done() {
+      window.location.href = '/index.html';
+    }
+
+    function openFile() {
+      // Placeholder for file open functionality
+      showNotification('Open functionality not implemented yet.', 'info');
     }
 
     function testBot() {
-      const userBotCode = document.querySelector('#code-area').value;
-      const simulationResult = simulateGame(userBotCode);
-      if (simulationResult.error) {
-        showConsole(`Error: ${simulationResult.error}`);
-      } else {
-        showConsole(simulationResult.results.join('\n') + `\n\nUser Total Points: ${simulationResult.userPoints}, Opponent Total Points: ${simulationResult.opponentPoints}`);
+      // Placeholder for test functionality
+      showNotification('Test functionality not implemented yet.', 'info');
+    }
+
+    function deleteBot() {
+      if (!currentBotId) {
+        showNotification('Please select a bot to delete.', 'error');
+        return;
+      }
+      if (confirm('Are you sure you want to delete this bot?')) {
+        fetch(`/api/bots/${currentBotId}`, { method: 'DELETE' })
+          .then(response => response.json())
+          .then(result => {
+            console.log('Delete result:', result);
+            showNotification('Bot deleted successfully!', 'success');
+            currentBotId = null;
+            document.getElementById('bot-name').value = '';
+            document.getElementById('bot-code').value = '';
+            populateBots();
+          })
+          .catch(error => {
+            console.error('Error deleting bot:', error);
+            showNotification('Failed to delete bot. Check console.', 'error');
+          });
       }
     }
 
-    function simulateGame(userBotCode) {
-      let userPoints = 0;
-      let opponentPoints = 0;
-      const userHistory = [];
-      const opponentHistory = [];
-      const results = [];
-
-      for (let round = 1; round <= 20; round++) {
-        const opponentChoice = round % 2 === 1 ? 'steal' : 'stay';
-        const userResult = interpretBotCode(userBotCode, opponentHistory, round);
-        if (userResult.error) return { error: userResult.error };
-        const userChoice = userResult.decision;
-
-        userHistory.push(userChoice);
-        opponentHistory.push(opponentChoice);
-
-        const [userPts, oppPts] = calculateRoundPoints(userChoice, opponentChoice);
-        userPoints += userPts;
-        opponentPoints += oppPts;
-        results.push(`Round ${round}: User ${userChoice}, Opponent ${opponentChoice} - User: ${userPoints}, Opponent: ${opponentPoints}`);
-      }
-      return { results, userPoints, opponentPoints };
+    function whatIsThis() {
+      showNotification('This is a bot creation and editing interface for Citizens or Crooks.', 'info');
     }
 
-    function calculateRoundPoints(choice1, choice2) {
-      if (choice1 === 'steal' && choice2 === 'stay') return [8, 0];
-      if (choice1 === 'stay' && choice2 === 'steal') return [0, 8];
-      if (choice1 === 'stay' && choice2 === 'stay') return [4, 4];
-      return [0, 0];
-    }
-
-    function interpretBotCode(code, opponentHistory, round) {
-      const lines = code.split('\n');
-      for (const line of lines) {
-        const trimmedLine = line.trim();
-        if (!trimmedLine || trimmedLine.startsWith('//')) continue;
-
-        if (['steal', 'stay'].includes(trimmedLine.toLowerCase())) {
-          return { decision: trimmedLine.toLowerCase() };
-        }
-
-        const percentageMatch = trimmedLine.match(/(\d+)% to (steal|stay)/i);
-        if (percentageMatch) {
-          const percent = parseInt(percentageMatch[1]) / 100;
-          return { decision: Math.random() < percent ? percentageMatch[2].toLowerCase() : (percentageMatch[2] === 'steal' ? 'stay' : 'steal') };
-        }
-
-        const ifMatch = trimmedLine.match(/if (.+) then (.+)( else (.+))?/i);
-        if (ifMatch) {
-          const condition = ifMatch[1].trim();
-          const action = ifMatch[2].trim();
-          const elseAction = ifMatch[4] ? ifMatch[4].trim() : null;
-
-          try {
-            if (evaluateCondition(condition, round, opponentHistory)) {
-              return { decision: executeAction(action, opponentHistory, round) };
-            } else if (elseAction) {
-              return interpretBotCode(elseAction, opponentHistory, round);
-            }
-          } catch (e) {
-            return { error: `Error in line: "${line}": ${e.message}` };
-          }
-        }
+    function loadExample(example) {
+      switch (example) {
+        case 'steal':
+          document.getElementById('bot-code').value = 'steal';
+          break;
+        case 'stay':
+          document.getElementById('bot-code').value = 'stay';
+          break;
+        case 'random':
+          document.getElementById('bot-code').value = '// Random choice example\nif (Math.random() > 0.5) { steal } else { stay }';
+          break;
       }
-      return { decision: Math.random() > 0.5 ? 'steal' : 'stay' };
-    }
-
-    function evaluateCondition(condition, round, opponentHistory) {
-      const nestedIfMatch = condition.match(/(.+) then (.+)/i);
-      if (nestedIfMatch) {
-        const subCondition = nestedIfMatch[1].trim();
-        return evaluateCondition(subCondition, round, opponentHistory);
-      }
-
-      const parts = condition.split(' ');
-      const operator = parts[0];
-      const value = parts.slice(1).join(' ');
-
-      if (operator === 'round_number') return parseInt(value) === round;
-      if (operator === 'not') {
-        if (value === 'round_number 1') return round !== 1;
-        if (value === 'opponent_last_steal') return !(opponentHistory.length > 0 && opponentHistory[opponentHistory.length - 1] === 'steal');
-      }
-      if (operator === 'opponent_last_steal') return opponentHistory.length > 0 && opponentHistory[opponentHistory.length - 1] === 'steal';
-      if (operator === 'opponent_steal_count') {
-        const count = parseInt(value) || 0;
-        return opponentHistory.filter(c => c === 'steal').length >= count;
-      }
-      if (operator === 'random') {
-        const [min, max] = value.split('-').map(Number);
-        return Math.random() * (max - min) + min > 50;
-      }
-      throw new Error(`Invalid condition: "${condition}"`);
-    }
-
-    function executeAction(action, opponentHistory, round) {
-      const percentageMatch = action.match(/(\d+)% to (steal|stay)/i);
-      if (percentageMatch) {
-        const percent = parseInt(percentageMatch[1]) / 100;
-        return Math.random() < percent ? percentageMatch[2].toLowerCase() : (percentageMatch[2] === 'steal' ? 'stay' : 'steal');
-      }
-      if (['steal', 'stay'].includes(action.toLowerCase())) return action.toLowerCase();
-      return interpretBotCode(action, opponentHistory, round);
-    }
-
-    function showConsole(message) {
-      const consoleDiv = document.getElementById('console');
-      const consoleContent = document.getElementById('console-content');
-      consoleDiv.style.display = 'block';
-      consoleContent.textContent = message;
+      showNotification('Example loaded!', 'success');
     }
 
     function showNotification(message, type = 'success') {
       const notification = document.getElementById('notification');
       notification.textContent = message;
-      notification.style.backgroundColor = type === 'error' ? '#dc3545' : type === 'info' ? '#17a2b8' : '#28a745';
+      notification.style.backgroundColor = type === 'error' ? '#dc3545' : '#28a745';
       notification.style.display = 'block';
       setTimeout(() => notification.style.display = 'none', 3000);
     }
 
-    function applyExample(example) {
-      const codeMap = {
-        'example: 1': `// 50% steal on round 1\nif round_number 1 then 50% to steal\n// Steal if opponent stole last\nif not opponent_last_steal then stay else steal`,
-        'example: 2': `// Always stay\nstay`,
-        'example: 3': `// Steal on round 1, then react\nif round_number 1 then steal\nif not round_number 1 then if opponent_last_steal then steal else stay`,
-        'example: 4': `// 70% steal on round 1, 30% if opponent stole 2+ times\nif round_number 1 then 70% to steal\nif opponent_steal_count 2 then 30% to steal else stay`,
-        'example: 5': `// Random strategy\nif random 0-100 then steal else stay`
-      };
-      document.querySelector('#code-area').value = codeMap[example] || '';
-      updateLineNumbers();
-      validateCode();
-    }
-
-    function showWhatIsThis() {
-      alert(
-        'Welcome to the Bot Editor!\n\n' +
-        '- Create/edit bots with unique strategies.\n' +
-        '- Use commands like `steal`, `stay`, `if`, or `random(0-100)`.\n' +
-        '- Test your bot and save to compete!\n' +
-        '- Delete bots from "My Bots" page.'
-      );
-    }
-
-    function showCommands() {
-      alert(
-        'Available Commands:\n' +
-        '- `steal`: Always steal.\n' +
-        '- `stay`: Always stay.\n' +
-        '- `X% to steal/stay`: Random choice with X% probability.\n' +
-        '- `if condition then action [else action]`: Conditional logic.\n' +
-        '- Conditions: `round_number N`, `not round_number 1`, `opponent_last_steal`, `not opponent_last_steal`, `opponent_steal_count N`, `random 0-100`.\n' +
-        'Example: `if round_number 1 then steal else 50% to steal`'
-      );
-    }
-
-    function validateCode() {
-      const code = document.getElementById('code-area').value;
-      const errors = [];
-      const lines = code.split('\n');
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line && !line.startsWith('//')) {
-          if (!line.match(/^(steal|stay|\d+% to (steal|stay)|if .+ then .+( else .+)?)$/i)) {
-            errors.push(`Line ${i + 1}: Invalid syntax`);
-          }
-        }
-      }
-      if (errors.length) showConsole(errors.join('\n'));
-      else document.getElementById('console').style.display = 'none';
-    }
-
-    // Auto-save every 10 seconds
-    function autoSave() {
-      if (editMode && currentBotId) {
-        clearTimeout(autoSaveTimeout);
-        autoSaveTimeout = setTimeout(saveBot, 10000);
-      }
-    }
-    document.getElementById('code-area').addEventListener('input', autoSave);
-
-    // Add input event listeners for real-time debugging
-    document.querySelector('.bot-name-input').addEventListener('input', (e) => {
-      console.log('botName input event:', e.target.value);
-    });
-    document.querySelector('.username-input').addEventListener('input', (e) => {
-      console.log('username input event:', e.target.value);
-    });
-
-    fetchBot();
-    updateLineNumbers();
-    validateCode();
-
-    // Debug: Log when the page loads
-    console.log('create-edit-bot.html loaded successfully at:', window.location.href);
+    // Event listeners
+    document.getElementById('username').addEventListener('input', populateBots);
+    populateBots(); // Initial population
   </script>
 </body>
 </html>
