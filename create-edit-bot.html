@@ -48,27 +48,54 @@
       color: #d4d4d4;
       border: 1px solid #3a6bb8;
     }
-    textarea {
+    #code-container {
+      position: relative;
+      width: 100%;
+    }
+    #line-numbers {
+      position: absolute;
+      left: 0;
+      top: 0;
+      padding: 10px 0;
+      background: #1e1e1e;
+      color: #858585;
+      text-align: right;
+      width: 30px;
+      border-right: 1px solid #3a6bb8;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      user-select: none;
+    }
+    #bot-code {
       width: 100%;
       height: 200px;
-      padding: 10px;
+      padding: 10px 10px 10px 40px;
       border-radius: 10px;
-      background-color: #1e3c72;
+      background-color: #1e1e1e;
       color: #d4d4d4;
       border: 1px solid #3a6bb8;
       resize: vertical;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    #bot-code:focus {
+      outline: none;
+      border-color: #4d7cce;
     }
     #console-box {
       width: 100%;
       height: 100px;
       padding: 10px;
       border-radius: 10px;
-      background-color: #1e3c72;
+      background-color: #1e1e1e;
       color: #d4d4d4;
       border: 1px solid #3a6bb8;
       margin-top: 10px;
       overflow-y: auto;
       text-align: left;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
     }
     .notification {
       position: fixed;
@@ -112,7 +139,10 @@
       </div>
       <div class="form-group">
         <label for="bot-code">Bot Code:</label>
-        <textarea id="bot-code" class="form-control" placeholder="Enter bot code (e.g., 'steal' or 'stay')"></textarea>
+        <div id="code-container">
+          <pre id="line-numbers"></pre>
+          <textarea id="bot-code" placeholder="Enter bot code (e.g., 'steal' or 'stay')"></textarea>
+        </div>
       </div>
       <div class="form-group">
         <label>Console:</label>
@@ -127,7 +157,7 @@
         <ul class="dropdown-menu" aria-labelledby="examples-btn">
           <li><a class="dropdown-item" href="#" onclick="loadExample('steal')">Always Steal</a></li>
           <li><a class="dropdown-item" href="#" onclick="loadExample('stay')">Always Stay</a></li>
-          <li><a class="dropdown-item" href="#" onclick="loadExample('random')">Random Choice (50% Steal)</a></li>
+          <li><a class="dropdown-item" href="#" onclick="loadExample('random')">Random Choice (70% Steal)</a></li>
           <li><a class="dropdown-item" href="#" onclick="loadExample('copyOpponent')">Copy Opponent (If Steal)</a></li>
           <li><a class="dropdown-item" href="#" onclick="loadExample('roundCondition')">Round 1 Steal, Else Stay</a></li>
         </ul>
@@ -179,6 +209,7 @@
         console.log('Loaded bot:', bot);
         document.getElementById('bot-name').value = bot.botname || '';
         document.getElementById('bot-code').value = bot.code || '';
+        updateLineNumbers();
         validateCode(); // Validate and update console on load
       } catch (error) {
         console.error('Error loading bot:', error);
@@ -267,15 +298,16 @@
           document.getElementById('bot-code').value = 'stay';
           break;
         case 'random':
-          document.getElementById('bot-code').value = '50% to steal';
+          document.getElementById('bot-code').value = '70% to steal';
           break;
         case 'copyOpponent':
-          document.getElementById('bot-code').value = 'if opponent_last_steal then steal else stay';
+          document.getElementById('bot-code').value = 'if opponent_last_steal then steal\nelse stay';
           break;
         case 'roundCondition':
-          document.getElementById('bot-code').value = 'if round_number 1 then steal else if not round_number 1 then stay';
+          document.getElementById('bot-code').value = 'if round_number 1 then steal\nelse stay';
           break;
       }
+      updateLineNumbers();
       validateCode(); // Update console after loading example
       showNotification('Example loaded!', 'success');
     }
@@ -286,7 +318,7 @@
         '- `steal`: Always steal.\n' +
         '- `stay`: Always stay.\n' +
         '- `X% to steal/stay`: Random choice with X% probability (e.g., 70% to steal).\n' +
-        '- `if condition then action [else action]`: Make a choice based on a condition.\n' +
+        '- `if condition then action` or `if condition then action else action`: Make a choice based on a condition (one command per line).\n' +
         '- Conditions: `round_number N` (e.g., round_number 1 for round 1), `not round_number N` (e.g., not round_number 1 for not round 1),\n' +
         '  `opponent_last_steal` (if opponent stole last time), `not opponent_last_steal` (if opponent didn’t steal last time),\n' +
         '  `opponent_steal_count N` (e.g., opponent_steal_count 5 if opponent stole 5+ times), `random 0-100` (random number 0-100).\n' +
@@ -295,8 +327,8 @@
         '1. `steal` - Always steal every round.\n' +
         '2. `stay` - Always stay every round.\n' +
         '3. `70% to steal` - 70% chance to steal, 30% to stay.\n' +
-        '4. `if opponent_last_steal then steal else stay` - Steal if opponent stole last, else stay.\n' +
-        '5. `if round_number 1 then steal else if not round_number 1 then stay` - Steal on round 1, stay otherwise.'
+        '4. `if opponent_last_steal then steal\nelse stay` - Steal if opponent stole last, else stay.\n' +
+        '5. `if round_number 1 then steal\nelse stay` - Steal on round 1, stay otherwise.'
       );
     }
 
@@ -351,10 +383,25 @@
       }
     }
 
+    function updateLineNumbers() {
+      const code = document.getElementById('bot-code');
+      const lineNumbers = document.getElementById('line-numbers');
+      const lines = code.value.split('\n').length;
+      lineNumbers.textContent = Array(lines).fill().map((_, i) => i + 1).join('\n') + '\n';
+    }
+
     // Event listeners
     document.getElementById('username').addEventListener('input', populateBots);
-    document.getElementById('bot-code').addEventListener('input', () => { validateCode(); autoSave(); });
+    document.getElementById('bot-code').addEventListener('input', () => {
+      updateLineNumbers();
+      validateCode();
+      autoSave();
+    });
+    document.getElementById('bot-code').addEventListener('scroll', () => {
+      document.getElementById('line-numbers').style.top = `-${document.getElementById('bot-code').scrollTop}px`;
+    });
     populateBots(); // Initial population
+    updateLineNumbers(); // Initial line numbers
   </script>
 </body>
 </html>
