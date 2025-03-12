@@ -47,6 +47,7 @@ async function startServer() {
         params.push(username);
       }
       const result = await client.query(query, params);
+      console.log('Fetched bots:', result.rows); // Debug: Log fetched bots
       res.json(result.rows);
     } catch (err) {
       console.error('Error fetching bots:', err.stack);
@@ -73,13 +74,13 @@ async function startServer() {
   app.post('/api/bots', async (req, res) => {
     const { botName, username, code } = req.body;
     console.log('Received bot data:', { botName, username, code }); // Debug log
-    if (!botName || !username || typeof botName !== 'string' || typeof username !== 'string') {
+    if (!botName || !username || typeof botName !== 'string' || typeof username !== 'string' || botName.trim() === '' || username.trim() === '') {
       return res.status(400).json({ error: 'botName and username must be non-empty strings' });
     }
     try {
       const result = await client.query(
         'INSERT INTO bots (botName, username, code) VALUES ($1, $2, $3) RETURNING *',
-        [botName, username, code || '']
+        [botName.trim(), username.trim(), code || '']
       );
       console.log('Bot created successfully:', result.rows[0]);
       res.status(201).json(result.rows[0]);
@@ -94,13 +95,13 @@ async function startServer() {
     const { id } = req.params;
     const { botName, username, code } = req.body;
     console.log('Received update data:', { id, botName, username, code }); // Debug log
-    if (!botName || !username || typeof botName !== 'string' || typeof username !== 'string') {
+    if (!botName || !username || typeof botName !== 'string' || typeof username !== 'string' || botName.trim() === '' || username.trim() === '') {
       return res.status(400).json({ error: 'botName and username must be non-empty strings' });
     }
     try {
       const result = await client.query(
         'UPDATE bots SET botName = $1, username = $2, code = $3 WHERE id = $4 RETURNING *',
-        [botName, username, code || '', id]
+        [botName.trim(), username.trim(), code || '', id]
       );
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Bot not found' });
