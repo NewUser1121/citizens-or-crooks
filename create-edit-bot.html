@@ -58,6 +58,18 @@
       border: 1px solid #3a6bb8;
       resize: vertical;
     }
+    #console-box {
+      width: 100%;
+      height: 100px;
+      padding: 10px;
+      border-radius: 10px;
+      background-color: #1e3c72;
+      color: #d4d4d4;
+      border: 1px solid #3a6bb8;
+      margin-top: 10px;
+      overflow-y: auto;
+      text-align: left;
+    }
     .notification {
       position: fixed;
       top: 20px;
@@ -102,6 +114,10 @@
         <label for="bot-code">Bot Code:</label>
         <textarea id="bot-code" class="form-control" placeholder="Enter bot code (e.g., 'steal' or 'stay')"></textarea>
       </div>
+      <div class="form-group">
+        <label>Console:</label>
+        <div id="console-box"></div>
+      </div>
       <button class="btn" onclick="saveBot()">Save</button>
       <button class="btn" onclick="done()">Done</button>
       <button class="btn" onclick="openFile()">Open</button>
@@ -111,7 +127,9 @@
         <ul class="dropdown-menu" aria-labelledby="examples-btn">
           <li><a class="dropdown-item" href="#" onclick="loadExample('steal')">Always Steal</a></li>
           <li><a class="dropdown-item" href="#" onclick="loadExample('stay')">Always Stay</a></li>
-          <li><a class="dropdown-item" href="#" onclick="loadExample('random')">Random Choice</a></li>
+          <li><a class="dropdown-item" href="#" onclick="loadExample('random')">Random Choice (50% Steal)</a></li>
+          <li><a class="dropdown-item" href="#" onclick="loadExample('copyOpponent')">Copy Opponent (If Steal)</a></li>
+          <li><a class="dropdown-item" href="#" onclick="loadExample('roundCondition')">Round 1 Steal, Else Stay</a></li>
         </ul>
       </div>
       <button class="btn" onclick="deleteBot()">Delete</button>
@@ -161,6 +179,7 @@
         console.log('Loaded bot:', bot);
         document.getElementById('bot-name').value = bot.botname || '';
         document.getElementById('bot-code').value = bot.code || '';
+        validateCode(); // Validate and update console on load
       } catch (error) {
         console.error('Error loading bot:', error);
         showNotification('Failed to load bot. Check console.', 'error');
@@ -250,16 +269,14 @@
         case 'random':
           document.getElementById('bot-code').value = '50% to steal';
           break;
-        case 'firstRoundSteal':
-          document.getElementById('bot-code').value = 'if round_number 1 then steal else stay';
-          break;
         case 'copyOpponent':
           document.getElementById('bot-code').value = 'if opponent_last_steal then steal else stay';
           break;
-        case 'stealIfOpponentStealsOften':
-          document.getElementById('bot-code').value = 'if opponent_steal_count 5 then steal else 30% to steal';
+        case 'roundCondition':
+          document.getElementById('bot-code').value = 'if round_number 1 then steal else if not round_number 1 then stay';
           break;
       }
+      validateCode(); // Update console after loading example
       showNotification('Example loaded!', 'success');
     }
 
@@ -268,7 +285,7 @@
         'Available Commands:\n' +
         '- `steal`: Always steal.\n' +
         '- `stay`: Always stay.\n' +
-        '- `X% to steal/stay`: Random choice with X% probability (e.g., 50% to steal).\n' +
+        '- `X% to steal/stay`: Random choice with X% probability (e.g., 70% to steal).\n' +
         '- `if condition then action [else action]`: Make a choice based on a condition.\n' +
         '- Conditions: `round_number N` (e.g., round_number 1 for round 1), `not round_number N` (e.g., not round_number 1 for not round 1),\n' +
         '  `opponent_last_steal` (if opponent stole last time), `not opponent_last_steal` (if opponent didn’t steal last time),\n' +
@@ -277,27 +294,52 @@
         'Examples:\n' +
         '1. `steal` - Always steal every round.\n' +
         '2. `stay` - Always stay every round.\n' +
-        '3. `50% to steal` - 50% chance to steal, 50% to stay.\n' +
-        '4. `if round_number 1 then steal else stay` - Steal on round 1, then stay.\n' +
-        '5. `if opponent_last_steal then steal else stay` - Copy what opponent did last time.\n' +
-        '6. `if opponent_steal_count 5 then steal else 30% to steal` - Steal if opponent stole 5+ times, otherwise 30% chance to steal.'
+        '3. `70% to steal` - 70% chance to steal, 30% to stay.\n' +
+        '4. `if opponent_last_steal then steal else stay` - Steal if opponent stole last, else stay.\n' +
+        '5. `if round_number 1 then steal else if not round_number 1 then stay` - Steal on round 1, stay otherwise.'
       );
     }
 
     function validateCode() {
       const code = document.getElementById('bot-code').value;
+      const consoleBox = document.getElementById('console-box');
       const errors = [];
       const lines = code.split('\n');
+      let behavior = '';
+
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line && !line.startsWith('//')) {
           if (!line.match(/^(steal|stay|\d+% to (steal|stay)|if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?)$/i)) {
             errors.push(`Line ${i + 1}: Invalid syntax`);
+          } else {
+            // Simulate behavior for valid code
+            if (line === 'steal') behavior += 'Bot will always steal.\n';
+            else if (line === 'stay') behavior += 'Bot will always stay.\n';
+            else if (line.match(/^\d+% to (steal|stay)/)) {
+              const percent = parseInt(line.match(/^\d+/)[0]);
+              const action = line.includes('steal') ? 'steal' : 'stay';
+              behavior += `Bot has ${percent}% chance to ${action}, ${100 - percent}% to ${action === 'steal' ? 'stay' : 'steal'}.\n`;
+            } else if (line.includes('if')) {
+              const condition = line.match(/(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100)/)[0];
+              const thenAction = line.match(/then (steal|stay|\d+% to (steal|stay))/)[1];
+              const elseAction = line.includes('else') ? line.match(/else (steal|stay|\d+% to (steal|stay))/)[1] : null;
+              behavior += `Bot will ${thenAction} if ${condition}, ${elseAction ? 'else ' + elseAction : 'otherwise default behavior'}.\n`;
+            }
           }
         }
       }
-      if (errors.length) showNotification(errors.join('\n'), 'error');
-      else document.getElementById('notification').style.display = 'none';
+
+      if (errors.length) {
+        consoleBox.textContent = errors.join('\n');
+        consoleBox.style.borderColor = '#dc3545'; // Red for errors
+      } else if (behavior) {
+        consoleBox.textContent = 'Code is valid!\nBehavior:\n' + behavior;
+        consoleBox.style.borderColor = '#28a745'; // Green for success
+      } else {
+        consoleBox.textContent = 'No valid code entered.';
+        consoleBox.style.borderColor = '#3a6bb8'; // Default color
+      }
     }
 
     // Auto-save every 10 seconds
