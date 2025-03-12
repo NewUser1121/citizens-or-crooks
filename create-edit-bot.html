@@ -83,8 +83,8 @@
       border: none;
       resize: none;
       outline: none;
-      background: #00ffff; /* Aqua background for code area */
-      color: #d4d4d4; /* Original text color */
+      background: #1e3c72;
+      color: #d4d4d4;
       font-family: 'Consolas', monospace;
       line-height: 1.6;
       font-size: 1em;
@@ -169,11 +169,11 @@
       <button class="btn" onclick="testBot()">Test</button>
       <select class="form-control examples-dropdown" onchange="applyExample(this.value)">
         <option value="">Examples ▼</option>
-        <option value="example: 1">Always Steal</option>
-        <option value="example: 2">Always Stay</option>
-        <option value="example: 3">Steal on Round 1</option>
-        <option value="example: 4">Stay on Round 1</option>
-        <option value="example: 5">Alternate Steal/Stay</option>
+        <option value="example: 1">Example 1: Smart Reactor</option>
+        <option value="example: 2">Example 2: Always Stay</option>
+        <option value="example: 3">Example 3: First Steal</option>
+        <option value="example: 4">Example 4: Cautious Thief</option>
+        <option value="example: 5">Example 5: Random Choice</option>
       </select>
       <button class="btn" onclick="deleteBot()">Delete</button>
       <div class="tooltip">
@@ -363,7 +363,7 @@
       if (simulationResult.error) {
         showConsole(`Error: ${simulationResult.error}`);
       } else {
-        showConsole(simulationResult.results.join('\n') + `\n\nUser Total Points: ${simulationResult.userPoints}, Opponent Total Points: ${simulationResult.opponentPoints}`);
+        showConsole(simulationResult.results.join('\n') + `\n\nYour Bot's Total Points: ${simulationResult.userPoints}, Opponent's Total Points: ${simulationResult.opponentPoints}`);
       }
     }
 
@@ -375,7 +375,7 @@
       const results = [];
 
       for (let round = 1; round <= 20; round++) {
-        const opponentChoice = round % 2 === 1 ? 'steal' : 'stay'; // Simple opponent: steal on odd, stay on even
+        const opponentChoice = round % 2 === 1 ? 'steal' : 'stay'; // Opponent alternates: steal on odd rounds, stay on even
         const userResult = interpretBotCode(userBotCode, opponentHistory, round);
         if (userResult.error) return { error: userResult.error };
         const userChoice = userResult.decision;
@@ -386,7 +386,7 @@
         const [userPts, oppPts] = calculateRoundPoints(userChoice, opponentChoice);
         userPoints += userPts;
         opponentPoints += oppPts;
-        results.push(`Round ${round}: User ${userChoice}, Opponent ${opponentChoice} - User: ${userPoints}, Opponent: ${opponentPoints}`);
+        results.push(`Round ${round}: Your Bot: ${userChoice}, Opponent: ${opponentChoice} - Your Points: ${userPoints}, Opponent: ${opponentPoints}`);
       }
       return { results, userPoints, opponentPoints };
     }
@@ -469,7 +469,7 @@
         return Math.random() < percent ? percentageMatch[2].toLowerCase() : (percentageMatch[2] === 'steal' ? 'stay' : 'steal');
       }
       if (['steal', 'stay'].includes(action.toLowerCase())) return action.toLowerCase();
-      return interpretBotCode(action, opponentHistory, round);
+      return interpretBotCode(action, opponentHistory, round).decision;
     }
 
     function showConsole(message) {
@@ -489,15 +489,16 @@
 
     function applyExample(example) {
       const codeMap = {
-        'example: 1': `steal`, // Always Steal
-        'example: 2': `stay`, // Always Stay
-        'example: 3': `if round_number 1 then steal else stay`, // Steal on Round 1
-        'example: 4': `if round_number 1 then stay else steal`, // Stay on Round 1
-        'example: 5': `if round_number 1 then steal else if round_number 2 then stay else if round_number 3 then steal else stay` // Alternate Steal/Stay
+        'example: 1': `// 50% steal on round 1\nif round_number 1 then 50% to steal\n// Steal if opponent stole last\nif not opponent_last_steal then stay else steal`,
+        'example: 2': `// Always stay\nstay`,
+        'example: 3': `// Steal on round 1, then react\nif round_number 1 then steal\nif not round_number 1 then if opponent_last_steal then steal else stay`,
+        'example: 4': `// 70% steal on round 1, 30% if opponent stole 2+ times\nif round_number 1 then 70% to steal\nif opponent_steal_count 2 then 30% to steal else stay`,
+        'example: 5': `// Random strategy\nif random 0-100 then steal else stay`
       };
       document.querySelector('#code-area').value = codeMap[example] || '';
       updateLineNumbers();
       validateCode();
+      showNotification(`Loaded ${example}! Test it out!`, 'success');
     }
 
     function showWhatIsThis() {
@@ -505,7 +506,7 @@
         'Welcome to the Bot Editor!\n\n' +
         '- Create/edit bots with unique strategies.\n' +
         '- Enter a Username/Bot Name to identify your bot.\n' +
-        '- Use commands like `steal`, `stay`, `if`, or `random(0-100)`.\n' +
+        '- Use commands like `steal`, `stay`, `if`, or `random 0-100`.\n' +
         '- Test your bot and save to compete!\n' +
         '- Delete bots from "My Bots" page.'
       );
