@@ -111,14 +111,17 @@
       try {
         const response = await fetch('/api/bots');
         const bots = await response.json();
+        console.log('Fetched bots in play-game:', bots);
         const bot1Select = document.getElementById('bot1-select');
         const bot2Select = document.getElementById('bot2-select');
         bot1Select.innerHTML = '<option value="">Select a bot...</option>';
         bot2Select.innerHTML = '<option value="">Select a bot...</option>';
         bots.forEach(bot => {
+          const botName = bot.botName !== undefined ? bot.botName : (bot.botname || 'Unnamed Bot');
+          console.log(`Bot ${bot.id} name for display:`, botName); // Debug
           const option = document.createElement('option');
           option.value = bot.id;
-          option.textContent = `${bot.botName} (${bot.username}) - ${bot.points} pts`;
+          option.textContent = `${botName} (${bot.username || 'Unknown User'}) - ${bot.points || 0} pts`;
           bot1Select.appendChild(option.cloneNode(true));
           bot2Select.appendChild(option.cloneNode(true));
         });
@@ -227,4 +230,4 @@
     populateBots();
   </script>
 </body>
-</html>
+</html> 
