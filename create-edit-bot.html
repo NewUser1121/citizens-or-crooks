@@ -7,9 +7,9 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body {
-      background: #1e3c72;
+      background: #1e3c72; /* Original dark blue background */
       font-family: 'Arial', sans-serif;
-      color: #d4d4d4;
+      color: #d4d4d4; /* Light text for contrast */
     }
     .container {
       padding: 40px;
@@ -19,7 +19,8 @@
       max-width: 600px;
       margin: 0 auto;
       padding: 20px;
-      background: #2a5298;
+      background: #2a5298; /* Original section background */
+      border: 2px solid #3a6bb8; /* Original border */
       border-radius: 15px;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     }
@@ -30,7 +31,7 @@
       border-radius: 20px;
       padding: 12px 25px;
       margin: 5px;
-      background-color: #3a6bb8;
+      background-color: #3a6bb8; /* Original button color */
       border: none;
       color: #d4d4d4;
       transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
@@ -38,15 +39,25 @@
     .btn:hover {
       transform: translateY(-3px);
       box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-      background-color: #4d7cce;
+      background-color: #4d7cce; /* Original hover color */
     }
     select {
       width: 100%;
-      padding: 5px;
+      padding: 10px;
       border-radius: 10px;
       background-color: #1e3c72;
       color: #d4d4d4;
       border: 1px solid #3a6bb8;
+      font-size: 16px;
+    }
+    input[type="text"] {
+      width: 100%; /* Increased size */
+      padding: 12px; /* Increased padding */
+      border-radius: 10px;
+      background-color: #1e3c72;
+      color: #d4d4d4;
+      border: 1px solid #3a6bb8;
+      font-size: 18px; /* Larger text */
     }
     textarea {
       width: 100%;
@@ -57,6 +68,7 @@
       color: #d4d4d4;
       border: 1px solid #3a6bb8;
       resize: vertical;
+      font-size: 16px;
     }
     .notification {
       position: fixed;
@@ -112,6 +124,11 @@
           <li><a class="dropdown-item" href="#" onclick="loadExample('steal')">Always Steal</a></li>
           <li><a class="dropdown-item" href="#" onclick="loadExample('stay')">Always Stay</a></li>
           <li><a class="dropdown-item" href="#" onclick="loadExample('random')">Random Choice</a></li>
+          <li><a class="dropdown-item" href="#" onclick="loadExample('titForTat')">Tit for Tat</a></li>
+          <li><a class="dropdown-item" href="#" onclick="loadExample('grimTrigger')">Grim Trigger</a></li>
+          <li><a class="dropdown-item" href="#" onclick="loadExample('alternate')">Alternate Strategy</a></li>
+          <li><a class="dropdown-item" href="#" onclick="loadExample('copyLast')">Copy Last Move</a></li>
+          <li><a class="dropdown-item" href="#" onclick="loadExample('cooperateFirst')">Cooperate First</a></li>
         </ul>
       </div>
       <button class="btn" onclick="deleteBot()">Delete</button>
@@ -245,15 +262,37 @@
       switch (example) {
         case 'steal':
           document.getElementById('bot-code').value = 'steal';
+          showNotification('Example: Always Steal - This bot always chooses to steal, maximizing points if the opponent stays.', 'success');
           break;
         case 'stay':
           document.getElementById('bot-code').value = 'stay';
+          showNotification('Example: Always Stay - This bot always chooses to stay, ensuring mutual benefit if the opponent also stays.', 'success');
           break;
         case 'random':
           document.getElementById('bot-code').value = '// Random choice example\nif (Math.random() > 0.5) { steal } else { stay }';
+          showNotification('Example: Random Choice - This bot randomly selects steal or stay each round, introducing unpredictability.', 'success');
+          break;
+        case 'titForTat':
+          document.getElementById('bot-code').value = '// Tit for Tat example\nif (opponentHistory.length > 0) { opponentHistory[opponentHistory.length - 1] } else { stay }';
+          showNotification('Example: Tit for Tat - This bot starts by staying and then mimics the opponent\'s last move, encouraging cooperation.', 'success');
+          break;
+        case 'grimTrigger':
+          document.getElementById('bot-code').value = '// Grim Trigger example\nif (opponentHistory.includes(\'steal\')) { steal } else { stay }';
+          showNotification('Example: Grim Trigger - This bot stays until the opponent steals, then always steals thereafter as punishment.', 'success');
+          break;
+        case 'alternate':
+          document.getElementById('bot-code').value = '// Alternate Strategy example\nif (round % 2 === 1) { steal } else { stay }';
+          showNotification('Example: Alternate Strategy - This bot alternates between steal and stay each round, creating a predictable pattern.', 'success');
+          break;
+        case 'copyLast':
+          document.getElementById('bot-code').value = '// Copy Last Move example\nif (opponentHistory.length > 0) { opponentHistory[opponentHistory.length - 1] } else { steal }';
+          showNotification('Example: Copy Last Move - This bot starts by stealing and then copies the opponent\'s previous move.', 'success');
+          break;
+        case 'cooperateFirst':
+          document.getElementById('bot-code').value = '// Cooperate First example\nif (round === 1) { stay } else { steal }';
+          showNotification('Example: Cooperate First - This bot stays on the first round to encourage cooperation, then steals afterward.', 'success');
           break;
       }
-      showNotification('Example loaded!', 'success');
     }
 
     function showNotification(message, type = 'success') {
