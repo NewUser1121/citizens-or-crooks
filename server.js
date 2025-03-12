@@ -4,13 +4,13 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Debug logs for environment variables
+// Debug log for DATABASE_URL
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
-console.log('DATABASE_URL_FALLBACK:', process.env.DATABASE_URL_FALLBACK);
 
+// Use DATABASE_URL, with a fallback for local testing only
 const client = new Client({
-  connectionString: process.env.DATABASE_URL || process.env.DATABASE_URL_FALLBACK || 'postgresql://localhost:5432/citizens_db',
-  ssl: process.env.DATABASE_URL || process.env.DATABASE_URL_FALLBACK ? { rejectUnauthorized: false } : false,
+  connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/citizens_db',
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
 });
 
 async function startServer() {
@@ -28,7 +28,7 @@ async function startServer() {
     `);
   } catch (err) {
     console.error('Database connection error:', err.stack);
-    process.exit(1); // Exit if connection fails
+    process.exit(1);
   }
 
   app.get('/api/bots', async (req, res) => {

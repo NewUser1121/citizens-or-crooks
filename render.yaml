@@ -9,19 +9,13 @@ services:
       - key: NODE_VERSION
         value: "18"
       - key: NODE_ENV
-        value: production
-      # Dynamic database URL linking
+        value: "production"
       - key: DATABASE_URL
-        fromDatabase:
-          name: citizens_db
-          property: connectionString
-      # Fallback environment variable (for troubleshooting only)
-      - key: DATABASE_URL_FALLBACK
         value: "postgresql://citizens_user:GuqgrLd0GPzUnGNBynm6igYdB70VgBsv@dpg-cv8jgdrqf0us73b95h10-a.oregon-postgres.render.com/citizens_db"
-    autoDeploy: true # Ensures redeploy on push
+    autoDeploy: true
 databases:
   - name: citizens_db
     databaseName: citizens_db
     user: citizens_user
     plan: free
-    ipAllowList: [] # Optional: Restrict access if needed
+    ipAllowList: []
