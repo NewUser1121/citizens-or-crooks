@@ -137,8 +137,8 @@
         const botSelect = document.getElementById('bot-select');
         botSelect.innerHTML = '<option value="">Choose a bot...</option>';
         bots.forEach(bot => {
-          const botName = bot.botname !== undefined ? bot.botname : 'Unnamed Bot'; // Use lowercase botname
-          console.log(`Bot ${bot.id} name for display:`, botName); // Debug
+          const botName = bot.botname !== undefined ? bot.botname : 'Unnamed Bot';
+          console.log(`Bot ${bot.id} name for display:`, botName);
           const option = document.createElement('option');
           option.value = bot.id;
           option.textContent = `${botName}`;
@@ -205,12 +205,10 @@
     }
 
     function openFile() {
-      // Placeholder for file open functionality
       showNotification('Open functionality not implemented yet.', 'info');
     }
 
     function testBot() {
-      // Placeholder for test functionality
       showNotification('Test functionality not implemented yet.', 'info');
     }
 
@@ -238,7 +236,7 @@
     }
 
     function whatIsThis() {
-      showNotification('This is a bot creation and editing interface for Citizens or Crooks.', 'info');
+      showCommands();
     }
 
     function loadExample(example) {
@@ -250,22 +248,70 @@
           document.getElementById('bot-code').value = 'stay';
           break;
         case 'random':
-          document.getElementById('bot-code').value = '// Random choice example\nif (Math.random() > 0.5) { steal } else { stay }';
+          document.getElementById('bot-code').value = '50% to steal';
+          break;
+        case 'firstRoundSteal':
+          document.getElementById('bot-code').value = 'if round_number 1 then steal else stay';
+          break;
+        case 'copyOpponent':
+          document.getElementById('bot-code').value = 'if opponent_last_steal then steal else stay';
+          break;
+        case 'stealIfOpponentStealsOften':
+          document.getElementById('bot-code').value = 'if opponent_steal_count 5 then steal else 30% to steal';
           break;
       }
       showNotification('Example loaded!', 'success');
     }
 
-    function showNotification(message, type = 'success') {
-      const notification = document.getElementById('notification');
-      notification.textContent = message;
-      notification.style.backgroundColor = type === 'error' ? '#dc3545' : '#28a745';
-      notification.style.display = 'block';
-      setTimeout(() => notification.style.display = 'none', 3000);
+    function showCommands() {
+      alert(
+        'Available Commands:\n' +
+        '- `steal`: Always steal.\n' +
+        '- `stay`: Always stay.\n' +
+        '- `X% to steal/stay`: Random choice with X% probability (e.g., 50% to steal).\n' +
+        '- `if condition then action [else action]`: Make a choice based on a condition.\n' +
+        '- Conditions: `round_number N` (e.g., round_number 1 for round 1), `not round_number N` (e.g., not round_number 1 for not round 1),\n' +
+        '  `opponent_last_steal` (if opponent stole last time), `not opponent_last_steal` (if opponent didn’t steal last time),\n' +
+        '  `opponent_steal_count N` (e.g., opponent_steal_count 5 if opponent stole 5+ times), `random 0-100` (random number 0-100).\n' +
+        '- Actions: `steal`, `stay`, or `X% to steal/stay`.\n' +
+        'Examples:\n' +
+        '1. `steal` - Always steal every round.\n' +
+        '2. `stay` - Always stay every round.\n' +
+        '3. `50% to steal` - 50% chance to steal, 50% to stay.\n' +
+        '4. `if round_number 1 then steal else stay` - Steal on round 1, then stay.\n' +
+        '5. `if opponent_last_steal then steal else stay` - Copy what opponent did last time.\n' +
+        '6. `if opponent_steal_count 5 then steal else 30% to steal` - Steal if opponent stole 5+ times, otherwise 30% chance to steal.'
+      );
+    }
+
+    function validateCode() {
+      const code = document.getElementById('bot-code').value;
+      const errors = [];
+      const lines = code.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line && !line.startsWith('//')) {
+          if (!line.match(/^(steal|stay|\d+% to (steal|stay)|if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?)$/i)) {
+            errors.push(`Line ${i + 1}: Invalid syntax`);
+          }
+        }
+      }
+      if (errors.length) showNotification(errors.join('\n'), 'error');
+      else document.getElementById('notification').style.display = 'none';
+    }
+
+    // Auto-save every 10 seconds
+    let autoSaveTimeout;
+    function autoSave() {
+      if (currentBotId) {
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(saveBot, 10000);
+      }
     }
 
     // Event listeners
     document.getElementById('username').addEventListener('input', populateBots);
+    document.getElementById('bot-code').addEventListener('input', () => { validateCode(); autoSave(); });
     populateBots(); // Initial population
   </script>
 </body>
