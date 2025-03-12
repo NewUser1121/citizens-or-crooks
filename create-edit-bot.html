@@ -186,6 +186,17 @@
       return decodeURIComponent(results[2].replace(/\+/g, ' '));
     }
 
+    // Notification function
+    function showNotification(message, type = 'success') {
+      const notification = document.getElementById('notification');
+      notification.textContent = message;
+      notification.style.backgroundColor = type === 'error' ? '#dc3545' : type === 'info' ? '#17a2b8' : '#28a745';
+      notification.style.display = 'block';
+      setTimeout(() => {
+        notification.style.display = 'none';
+      }, 3000);
+    }
+
     async function populateBots() {
       const username = document.getElementById('username').value.trim();
       if (!username) {
@@ -245,8 +256,14 @@
       const username = document.getElementById('username').value.trim();
       const botName = document.getElementById('bot-name').value.trim();
       const botCode = document.getElementById('bot-code').value.trim();
+      
+      // Validation checks
       if (!username || !botName) {
         showNotification('Username and bot name are required.', 'error');
+        return;
+      }
+      if (!botCode) {
+        showNotification('Bot code cannot be empty.', 'error');
         return;
       }
 
@@ -265,13 +282,13 @@
         if (response.ok) {
           showNotification('Bot saved successfully!', 'success');
           currentBotId = result.id || currentBotId;
-          populateBots();
+          await populateBots(); // Refresh the bot list
         } else {
           showNotification(`Failed to save bot: ${result.error || 'Unknown error'}`, 'error');
         }
       } catch (error) {
         console.error('Error saving bot:', error);
-        showNotification('Failed to save bot. Check console.', 'error');
+        showNotification('Failed to save bot. Check console for details.', 'error');
       }
     }
 
@@ -376,13 +393,14 @@
       const lines = code.split('\n');
       let behavior = '';
       const ifStack = []; // Stack to track nested if contexts
+      let nestedLevel = 0; // Track nesting level for behavior formatting
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line && !line.startsWith('//')) {
           // Match 'if' statements with optional arithmetic in conditions
           if (line.startsWith('if ') || line.startsWith('else if ')) {
-            // Adjusted regex to handle simpler conditions like 'opponent_last_steal'
+            // Adjusted regex to handle nested structures
             if (!line.match(/^((else )?if) (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( (>|<) (\d+|\d+\s*\*\s*\(round_number\s*-\s*\d+\))?)?) then (steal|stay|\d+% to (steal|stay))$/i)) {
               errors.push(`Line ${i + 1}: Invalid if statement syntax`);
             } else {
@@ -392,8 +410,8 @@
               } else {
                 const condition = line.match(/(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( (>|<) (\d+|\d+\s*\*\s*\(round_number\s*-\s*\d+\))?)?)/)[0];
                 const thenAction = line.match(/then (steal|stay|\d+% to (steal|stay))/)[1];
-                ifStack.push({ condition, thenAction, line: i + 1 });
-                behavior += `Bot will ${thenAction} if ${condition}`;
+                ifStack.push({ condition, thenAction, line: i + 1, nestedLevel });
+                behavior += `${'  '.repeat(nestedLevel)}Bot will ${thenAction} if ${condition}`;
               }
             }
           } else if (line.startsWith('else ')) {
@@ -401,7 +419,9 @@
               errors.push(`Line ${i + 1}: 'else' must follow an 'if' or 'else if' statement`);
             } else if (line.match(/^else (steal|stay|\d+% to (steal|stay))$/)) {
               const elseAction = line.match(/else (steal|stay|\d+% to (steal|stay))/)[1];
+              const currentContext = ifStack[ifStack.length - 1];
               behavior += `, else ${elseAction}.\n`;
+              nestedLevel = currentContext.nestedLevel;
               ifStack.pop(); // Close the current if context
             } else {
               errors.push(`Line ${i + 1}: Invalid else statement syntax`);
@@ -410,19 +430,22 @@
             if (ifStack.length === 0) {
               errors.push(`Line ${i + 1}: 'else' must follow an 'if' or 'else if' statement`);
             } else {
-              behavior += ', else:\n'; // Start a new block for nested statements
-              // Don't pop the stack yet; wait for the nested block to complete
+              const currentContext = ifStack[ifStack.length - 1];
+              behavior += `, else:\n`;
+              nestedLevel = currentContext.nestedLevel + 1; // Increase nesting level for the block
             }
           } else if (line.match(/^(steal|stay|\d+% to (steal|stay))$/)) {
             if (ifStack.length > 0) {
               // If inside an else block, treat this as the action for the last else
-              if (line === 'steal') behavior += `Bot will always steal.\n`;
-              else if (line === 'stay') behavior += `Bot will always stay.\n`;
+              const currentContext = ifStack[ifStack.length - 1];
+              if (line === 'steal') behavior += `${'  '.repeat(nestedLevel)}Bot will always steal.\n`;
+              else if (line === 'stay') behavior += `${'  '.repeat(nestedLevel)}Bot will always stay.\n`;
               else if (line.match(/^\d+% to (steal|stay)/)) {
                 const percent = parseInt(line.match(/^\d+/)[0]);
                 const action = line.includes('steal') ? 'steal' : 'stay';
-                behavior += `Bot has ${percent}% chance to ${action}, ${100 - percent}% to ${action === 'steal' ? 'stay' : 'steal'}.\n`;
+                behavior += `${'  '.repeat(nestedLevel)}Bot has ${percent}% chance to ${action}, ${100 - percent}% to ${action === 'steal' ? 'stay' : 'steal'}.\n`;
               }
+              nestedLevel = currentContext.nestedLevel; // Reset nesting level after block
               ifStack.pop(); // Close the current if context
             } else {
               // Standalone action
