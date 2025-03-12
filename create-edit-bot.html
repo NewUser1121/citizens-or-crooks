@@ -247,6 +247,7 @@
       const botNameInput = document.querySelector('.bot-name-input');
       const usernameInput = document.querySelector('.username-input');
       const codeArea = document.querySelector('#code-area');
+      const editBtn = document.getElementById('edit-btn');
 
       botNameInput.disabled = !editMode;
       usernameInput.disabled = !editMode;
@@ -260,6 +261,7 @@
         // Clear placeholder text when entering edit mode
         if (botNameInput.value === '(Bot name)') botNameInput.value = '';
         if (usernameInput.value === '(Username)') usernameInput.value = '';
+        editBtn.textContent = 'Done';
       } else {
         botNameInput.style.border = 'none';
         usernameInput.style.border = 'none';
@@ -267,6 +269,7 @@
         // Restore placeholder if empty
         if (!botNameInput.value.trim()) botNameInput.value = '(Bot name)';
         if (!usernameInput.value.trim()) usernameInput.value = '(Username)';
+        editBtn.textContent = 'Edit';
       }
     }
 
@@ -303,10 +306,10 @@
       const usernameInput = document.querySelector('.username-input');
       const code = document.querySelector('#code-area').value.trim();
 
-      // Debug: Log the raw values
-      console.log('botName raw:', botNameInput.value);
-      console.log('username raw:', usernameInput.value);
-      console.log('code raw:', code);
+      // Real-time debug logging
+      console.log('botName input value before save:', botNameInput.value);
+      console.log('username input value before save:', usernameInput.value);
+      console.log('code input value before save:', code);
 
       const botName = botNameInput.value.trim();
       const username = usernameInput.value.trim();
@@ -561,6 +564,14 @@
       }
     }
     document.getElementById('code-area').addEventListener('input', autoSave);
+
+    // Add input event listeners for real-time debugging
+    document.querySelector('.bot-name-input').addEventListener('input', (e) => {
+      console.log('botName input event:', e.target.value);
+    });
+    document.querySelector('.username-input').addEventListener('input', (e) => {
+      console.log('username input event:', e.target.value);
+    });
 
     fetchBot();
     updateLineNumbers();
