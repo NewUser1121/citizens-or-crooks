@@ -163,6 +163,8 @@
           <li><a class="dropdown-item" href="#" onclick="loadExample('stealIfOften')">Steal If Opponent Steals Often</a></li>
           <li><a class="dropdown-item" href="#" onclick="loadExample('randomHigh')">Random High Chance Steal</a></li>
           <li><a class="dropdown-item" href="#" onclick="loadExample('notLastSteal')">Stay If Opponent Didn’t Steal Last</a></li>
+          <li><a class="dropdown-item" href="#" onclick="loadExample('adaptiveTitForTat')">Adaptive Tit-for-Tat with Punishment</a></li>
+          <li><a class="dropdown-item" href="#" onclick="loadExample('escalatingPunishment')">Escalating Punishment</a></li>
         </ul>
       </div>
       <button class="btn" onclick="deleteBot()">Delete</button>
@@ -339,6 +341,12 @@
         case 'notLastSteal':
           document.getElementById('bot-code').value = 'if not opponent_last_steal then stay\nelse steal';
           break;
+        case 'adaptiveTitForTat':
+          document.getElementById('bot-code').value = 'if round_number 1 then stay\nelse if opponent_steal_count 3 then if random 0-100 > 10 then steal else stay\nelse if opponent_last_steal then steal\nelse stay';
+          break;
+        case 'escalatingPunishment':
+          document.getElementById('bot-code').value = 'if round_number 1 then stay\nelse if opponent_last_steal then steal\nelse if opponent_steal_count 3 then if random 0-100 < (30 * (round_number - 1)) then steal else if random 0-100 < 100 then stay\nelse stay';
+          break;
       }
       updateLineNumbers();
       validateCode(); // Update console after loading example
@@ -364,7 +372,9 @@
         '5. `if round_number 1 then steal\nelse stay` - Steal on round 1, stay otherwise.\n' +
         '6. `if opponent_steal_count 5 then steal\nelse stay` - Steal if opponent stole 5+ times, else stay.\n' +
         '7. `if random 0-100 > 80 then steal\nelse stay` - Steal if random number (0-100) is greater than 80, else stay.\n' +
-        '8. `if not opponent_last_steal then stay\nelse steal` - Stay if opponent didn’t steal last, else steal.'
+        '8. `if not opponent_last_steal then stay\nelse steal` - Stay if opponent didn’t steal last, else steal.\n' +
+        '9. `if round_number 1 then stay\nelse if opponent_steal_count 3 then if random 0-100 > 10 then steal else stay\nelse if opponent_last_steal then steal\nelse stay` - Adaptive tit-for-tat: Cooperate first, retaliate if opponent steals, punish if they steal often (90% steal), with 10% random steal chance.\n' +
+        '10. `if round_number 1 then stay\nelse if opponent_last_steal then steal\nelse if opponent_steal_count 3 then if random 0-100 < (30 * (round_number - 1)) then steal else if random 0-100 < 100 then stay\nelse stay` - Escalating punishment: Stay in round 1, retaliate if opponent steals last, escalate to 30% steal chance doubling each round after 3 opponent steals, reset to stay after stealing.'
       );
     }
 
@@ -374,30 +384,39 @@
       const errors = [];
       const lines = code.split('\n');
       let behavior = '';
-      let ifContext = null; // Reset context
+      let ifContext = null; // Track if statement context for multi-line else
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line && !line.startsWith('//')) {
           if (line.startsWith('if ')) {
-            if (!line.match(/^if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay))$/i)) {
+            // Updated regex to support expressions like (30 * (round_number - 1))
+            if (!line.match(/^if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+|\s*<\s*\(30\s*\*\s*\(round_number\s*-\s*1\)))?) then (steal|stay|\d+% to (steal|stay))$/i)) {
               errors.push(`Line ${i + 1}: Invalid if statement syntax`);
             } else {
               ifContext = {
-                condition: line.match(/(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?)/)[0],
+                condition: line.match(/(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+|\s*<\s*\(30\s*\*\s*\(round_number\s*-\s*1\)))?)/)[0],
                 thenAction: line.match(/then (steal|stay|\d+% to (steal|stay))/)[1]
               };
+              behavior += `Bot will ${ifContext.thenAction} if ${ifContext.condition}. `;
             }
           } else if (line.startsWith('else ')) {
             if (!ifContext) {
               errors.push(`Line ${i + 1}: 'else' must follow an 'if' statement`);
-            } else if (!line.match(/^else (steal|stay|\d+% to (steal|stay))$/)) {
+            } else if (!line.match(/^else (steal|stay|\d+% to (steal|stay)|if.*)$/)) {
               errors.push(`Line ${i + 1}: Invalid else statement syntax`);
             } else {
-              const elseAction = line.match(/else (steal|stay|\d+% to (steal|stay))/)[1];
-              behavior += `Bot will ${ifContext.thenAction} if ${ifContext.condition}, else ${elseAction}.\n`;
-              ifContext = null; // Clear context after processing else
+              const elseAction = line.match(/else (steal|stay|\d+% to (steal|stay)|if.*)/)[1];
+              if (elseAction.startsWith('if')) {
+                // Nested if will be processed in the next iteration
+                behavior += `Else, `;
+              } else {
+                behavior += `Else ${elseAction}.\n`;
+                ifContext = null; // Clear context after processing else
+              }
             }
+          } else if (line === 'else' && ifContext) {
+            errors.push(`Line ${i + 1}: 'else' must be followed by an action or another if statement`);
           } else if (ifContext) {
             errors.push(`Line ${i + 1}: Expected 'else' after 'if', got ${line}`);
           } else if (!line.match(/^(steal|stay|\d+% to (steal|stay))$/)) {
