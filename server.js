@@ -4,12 +4,13 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Debug log for DATABASE_URL
+// Debug logs for environment variables
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
+console.log('DATABASE_URL_FALLBACK:', process.env.DATABASE_URL_FALLBACK);
 
 const client = new Client({
-  connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/citizens_db', // Fallback for local testing
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false, // SSL only for Render
+  connectionString: process.env.DATABASE_URL || process.env.DATABASE_URL_FALLBACK || 'postgresql://localhost:5432/citizens_db',
+  ssl: process.env.DATABASE_URL || process.env.DATABASE_URL_FALLBACK ? { rejectUnauthorized: false } : false,
 });
 
 async function startServer() {
@@ -87,7 +88,6 @@ async function startServer() {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith('//')) continue;
       if (trimmed.toLowerCase() === 'steal' || trimmed.toLowerCase() === 'stay') return trimmed.toLowerCase();
-      // Add more logic as needed (e.g., % chance, if-then-else from your original)
     }
     return Math.random() > 0.5 ? 'steal' : 'stay';
   }
