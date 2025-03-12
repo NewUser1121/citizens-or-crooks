@@ -117,7 +117,7 @@
         bot1Select.innerHTML = '<option value="">Select a bot...</option>';
         bot2Select.innerHTML = '<option value="">Select a bot...</option>';
         bots.forEach(bot => {
-          const botName = bot.botName !== undefined ? bot.botName : (bot.botname || 'Unnamed Bot');
+          const botName = bot.botname !== undefined ? bot.botname : 'Unnamed Bot'; // Use lowercase botname
           console.log(`Bot ${bot.id} name for display:`, botName); // Debug
           const option = document.createElement('option');
           option.value = bot.id;
