@@ -263,7 +263,7 @@
         const result = await response.json();
         console.log('Save result:', result);
         if (response.ok) {
-          showNotification('Bot saved successfully!', 'success'); // Re-enable notification
+          showNotification('Bot saved successfully!', 'success'); // Ensure notification triggers
           currentBotId = result.id || currentBotId;
           populateBots();
         } else {
@@ -326,22 +326,22 @@
           document.getElementById('bot-code').value = '70% to steal';
           break;
         case 'copyOpponent':
-          document.getElementById('bot-code').value = 'if opponent_last_steal then steal\nelse stay';
+          document.getElementById('bot-code').value = 'if opponent_last_steal then steal\nelse stay;';
           break;
         case 'roundCondition':
-          document.getElementById('bot-code').value = 'if round_number 1 then steal\nelse stay';
+          document.getElementById('bot-code').value = 'if round_number 1 then steal\nelse stay;';
           break;
         case 'stealIfOften':
-          document.getElementById('bot-code').value = 'if opponent_steal_count 5 then steal\nelse stay';
+          document.getElementById('bot-code').value = 'if opponent_steal_count 5 then steal\nelse stay;';
           break;
         case 'randomHigh':
-          document.getElementById('bot-code').value = 'if random 0-100 > 80 then steal\nelse stay';
+          document.getElementById('bot-code').value = 'if random 0-100 > 80 then steal\nelse stay;';
           break;
         case 'notLastSteal':
-          document.getElementById('bot-code').value = 'if not opponent_last_steal then stay\nelse steal';
+          document.getElementById('bot-code').value = 'if not opponent_last_steal then stay\nelse steal;';
           break;
         case 'adaptiveTitForTat':
-          document.getElementById('bot-code').value = 'if round_number 1 then stay\nelse if opponent_steal_count 3 then if random 0-100 > 10 then steal else stay\nelse if opponent_last_steal then steal\nelse stay';
+          document.getElementById('bot-code').value = 'if round_number 1 then stay\nelse if opponent_steal_count 3 then if random 0-100 > 10 then steal else stay\nelse if opponent_last_steal then steal\nelse stay;';
           break;
       }
       updateLineNumbers();
@@ -355,21 +355,22 @@
         '- `steal`: Always steal.\n' +
         '- `stay`: Always stay.\n' +
         '- `X% to steal/stay`: Random choice with X% probability (e.g., 70% to steal).\n' +
-        '- `if condition then action` or `else action`: Make a choice based on a condition (one command per line).\n' +
+        '- `if condition then action` or `else action`: Make a choice based on a condition (multiple lines until ;).\n' +
         '- Conditions: `round_number N` (e.g., round_number 1 for round 1), `not round_number N` (e.g., not round_number 1 for not round 1),\n' +
         '  `opponent_last_steal` (if opponent stole last time), `not opponent_last_steal` (if opponent didn’t steal last time),\n' +
         '  `opponent_steal_count N` (e.g., opponent_steal_count 5 if opponent stole 5+ times), `random 0-100` (random number 0-100).\n' +
         '- Actions: `steal`, `stay`, or `X% to steal/stay`.\n' +
+        '- End a block with `;` to separate multiple if statements.\n' +
         'Examples:\n' +
         '1. `steal` - Always steal every round.\n' +
         '2. `stay` - Always stay every round.\n' +
         '3. `70% to steal` - 70% chance to steal, 30% to stay.\n' +
-        '4. `if opponent_last_steal then steal\nelse stay` - Steal if opponent stole last, else stay.\n' +
-        '5. `if round_number 1 then steal\nelse stay` - Steal on round 1, stay otherwise.\n' +
-        '6. `if opponent_steal_count 5 then steal\nelse stay` - Steal if opponent stole 5+ times, else stay.\n' +
-        '7. `if random 0-100 > 80 then steal\nelse stay` - Steal if random number (0-100) is greater than 80, else stay.\n' +
-        '8. `if not opponent_last_steal then stay\nelse steal` - Stay if opponent didn’t steal last, else steal.\n' +
-        '9. `if round_number 1 then stay\nelse if opponent_steal_count 3 then if random 0-100 > 10 then steal else stay\nelse if opponent_last_steal then steal\nelse stay` - Adaptive tit-for-tat: Cooperate first, retaliate if opponent steals, punish if they steal often (90% steal), with 10% random steal chance.'
+        '4. `if opponent_last_steal then steal\nelse stay;` - Steal if opponent stole last, else stay.\n' +
+        '5. `if round_number 1 then steal\nelse stay;` - Steal on round 1, stay otherwise.\n' +
+        '6. `if opponent_steal_count 5 then steal\nelse stay;` - Steal if opponent stole 5+ times, else stay.\n' +
+        '7. `if random 0-100 > 80 then steal\nelse stay;` - Steal if random number (0-100) is greater than 80, else stay.\n' +
+        '8. `if not opponent_last_steal then stay\nelse steal;` - Stay if opponent didn’t steal last, else steal.\n' +
+        '9. `if round_number 1 then stay\nelse if opponent_steal_count 3 then if random 0-100 > 10 then steal else stay\nelse if opponent_last_steal then steal\nelse stay;` - Adaptive tit-for-tat: Cooperate first, retaliate if opponent steals, punish if they steal often (90% steal), with 10% random steal chance.'
       );
     }
 
@@ -379,34 +380,95 @@
       const errors = [];
       const lines = code.split('\n');
       let behavior = '';
-      let ifContext = null; // Reset context for each line
+      let block = '';
+      let ifContext = null;
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line && !line.startsWith('//')) {
-          if (line.startsWith('if ')) {
-            if (!line.match(/^if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?$/i)) {
-              errors.push(`Line ${i + 1}: Invalid if statement syntax`);
-            } else {
-              const condition = line.match(/(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?)/)[0];
-              const thenAction = line.match(/then (steal|stay|\d+% to (steal|stay))/)[1];
-              const elseAction = line.match(/else (steal|stay|\d+% to (steal|stay))/) ? line.match(/else (steal|stay|\d+% to (steal|stay))/)[1] : null;
-              behavior += `Bot will ${thenAction} if ${condition}${elseAction ? ', else ' + elseAction : ''}.\n`;
-              ifContext = null; // Reset context after processing this if
+          block += line + '\n';
+          if (line.endsWith(';')) {
+            // Validate the accumulated block
+            const blockLines = block.trim().split('\n').map(l => l.trim()).filter(l => l && !l.endsWith(';'));
+            let validBlock = true;
+            let blockBehavior = '';
+
+            for (let j = 0; j < blockLines.length; j++) {
+              const currentLine = blockLines[j];
+              if (currentLine.startsWith('if ')) {
+                if (!currentLine.match(/^if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?$/i)) {
+                  errors.push(`Line ${i - blockLines.length + j + 1}: Invalid if statement syntax`);
+                  validBlock = false;
+                } else {
+                  const condition = currentLine.match(/(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?)/)[0];
+                  const thenAction = currentLine.match(/then (steal|stay|\d+% to (steal|stay))/)[1];
+                  const elseAction = currentLine.match(/else (steal|stay|\d+% to (steal|stay))/) ? currentLine.match(/else (steal|stay|\d+% to (steal|stay))/)[1] : null;
+                  blockBehavior += `Bot will ${thenAction} if ${condition}${elseAction ? ', else ' + elseAction : ''}.\n`;
+                  ifContext = null;
+                }
+              } else if (currentLine.startsWith('else ') && !ifContext) {
+                errors.push(`Line ${i - blockLines.length + j + 1}: 'else' must follow an 'if' statement within the block`);
+                validBlock = false;
+              } else if (!currentLine.match(/^(steal|stay|\d+% to (steal|stay)|if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?)$/)) {
+                errors.push(`Line ${i - blockLines.length + j + 1}: Invalid command`);
+                validBlock = false;
+              } else if (!currentLine.startsWith('if ')) {
+                if (currentLine === 'steal') blockBehavior += 'Bot will always steal.\n';
+                else if (currentLine === 'stay') blockBehavior += 'Bot will always stay.\n';
+                else if (currentLine.match(/^\d+% to (steal|stay)/)) {
+                  const percent = parseInt(currentLine.match(/^\d+/)[0]);
+                  const action = currentLine.includes('steal') ? 'steal' : 'stay';
+                  blockBehavior += `Bot has ${percent}% chance to ${action}, ${100 - percent}% to ${action === 'steal' ? 'stay' : 'steal'}.\n`;
+                }
+              }
             }
-          } else if (line.startsWith('else ') && !ifContext) {
-            errors.push(`Line ${i + 1}: 'else' must follow an 'if' statement`);
-          } else if (!line.match(/^(steal|stay|\d+% to (steal|stay)|if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?)$/)) {
-            errors.push(`Line ${i + 1}: Invalid command`);
-          } else if (!line.startsWith('if ')) {
-            if (line === 'steal') behavior += 'Bot will always steal.\n';
-            else if (line === 'stay') behavior += 'Bot will always stay.\n';
-            else if (line.match(/^\d+% to (steal|stay)/)) {
-              const percent = parseInt(line.match(/^\d+/)[0]);
-              const action = line.includes('steal') ? 'steal' : 'stay';
-              behavior += `Bot has ${percent}% chance to ${action}, ${100 - percent}% to ${action === 'steal' ? 'stay' : 'steal'}.\n`;
+
+            if (validBlock && blockBehavior) {
+              behavior += blockBehavior;
+            }
+            block = ''; // Reset block after processing
+          }
+        }
+      }
+
+      // Handle any remaining block without ;
+      if (block.trim()) {
+        const blockLines = block.trim().split('\n').map(l => l.trim()).filter(l => l);
+        let validBlock = true;
+        let blockBehavior = '';
+
+        for (let j = 0; j < blockLines.length; j++) {
+          const currentLine = blockLines[j];
+          if (currentLine.startsWith('if ')) {
+            if (!currentLine.match(/^if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?$/i)) {
+              errors.push(`Line ${lines.length - blockLines.length + j + 1}: Invalid if statement syntax`);
+              validBlock = false;
+            } else {
+              const condition = currentLine.match(/(round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?)/)[0];
+              const thenAction = currentLine.match(/then (steal|stay|\d+% to (steal|stay))/)[1];
+              const elseAction = currentLine.match(/else (steal|stay|\d+% to (steal|stay))/) ? currentLine.match(/else (steal|stay|\d+% to (steal|stay))/)[1] : null;
+              blockBehavior += `Bot will ${thenAction} if ${condition}${elseAction ? ', else ' + elseAction : ''}.\n';
+              ifContext = null;
+            }
+          } else if (currentLine.startsWith('else ') && !ifContext) {
+            errors.push(`Line ${lines.length - blockLines.length + j + 1}: 'else' must follow an 'if' statement within the block`);
+            validBlock = false;
+          } else if (!currentLine.match(/^(steal|stay|\d+% to (steal|stay)|if (round_number \d+|not round_number \d+|opponent_last_steal|not opponent_last_steal|opponent_steal_count \d+|random 0-100( > \d+)?) then (steal|stay|\d+% to (steal|stay))( else (steal|stay|\d+% to (steal|stay)))?)$/)) {
+            errors.push(`Line ${lines.length - blockLines.length + j + 1}: Invalid command`);
+            validBlock = false;
+          } else if (!currentLine.startsWith('if ')) {
+            if (currentLine === 'steal') blockBehavior += 'Bot will always steal.\n';
+            else if (currentLine === 'stay') blockBehavior += 'Bot will always stay.\n';
+            else if (currentLine.match(/^\d+% to (steal|stay)/)) {
+              const percent = parseInt(currentLine.match(/^\d+/)[0]);
+              const action = currentLine.includes('steal') ? 'steal' : 'stay';
+              blockBehavior += `Bot has ${percent}% chance to ${action}, ${100 - percent}% to ${action === 'steal' ? 'stay' : 'steal'}.\n';
             }
           }
+        }
+
+        if (validBlock && blockBehavior) {
+          behavior += blockBehavior;
         }
       }
 
