@@ -209,15 +209,23 @@
       const botId = urlParams.get('id');
       if (botId) {
         currentBotId = botId;
-        const response = await fetch(`/api/bots/${botId}`);
-        const bot = await response.json();
-        if (bot) {
-          document.querySelector('.bot-name-input').textContent = bot.botName || '(Bot name)';
-          document.querySelector('.username-input').textContent = bot.username || '(Username)';
-          document.querySelector('#code-area').value = bot.code || '';
-          updateLineNumbers();
-          validateCode();
-          showNotification(`Loaded bot: ${bot.botName}`);
+        try {
+          const response = await fetch(`/api/bots/${botId}`);
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          const bot = await response.json();
+          if (bot) {
+            document.querySelector('.bot-name-input').textContent = bot.botName || '(Bot name)';
+            document.querySelector('.username-input').textContent = bot.username || '(Username)';
+            document.querySelector('#code-area').value = bot.code || '';
+            updateLineNumbers();
+            validateCode();
+            showNotification(`Loaded bot: ${bot.botName}`);
+          } else {
+            showNotification('Bot not found.', 'error');
+          }
+        } catch (error) {
+          console.error('Error fetching bot:', error);
+          showNotification('Failed to load bot. Check console.', 'error');
         }
       }
     }
@@ -271,21 +279,27 @@
     async function openBot() {
       const username = prompt('Enter username:');
       if (username) {
-        const response = await fetch(`/api/bots?username=${encodeURIComponent(username)}`);
-        const bots = await response.json();
-        if (bots.length === 0) {
-          alert('No bots found for that username.');
-        } else if (bots.length === 1) {
-          window.location.href = `/create-edit-bot.html?id=${bots[0].id}`;
-        } else {
-          const botNames = bots.map(bot => bot.botName).join(', ');
-          const choice = prompt(`Choose a bot: ${botNames}`);
-          const selectedBot = bots.find(bot => bot.botName === choice);
-          if (selectedBot) {
-            window.location.href = `/create-edit-bot.html?id=${selectedBot.id}`;
+        try {
+          const response = await fetch(`/api/bots?username=${encodeURIComponent(username)}`);
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          const bots = await response.json();
+          if (bots.length === 0) {
+            alert('No bots found for that username.');
+          } else if (bots.length === 1) {
+            window.location.href = `/create-edit-bot.html?id=${bots[0].id}`;
           } else {
-            alert('Invalid choice.');
+            const botNames = bots.map(bot => bot.botName).join(', ');
+            const choice = prompt(`Choose a bot: ${botNames}`);
+            const selectedBot = bots.find(bot => bot.botName === choice);
+            if (selectedBot) {
+              window.location.href = `/create-edit-bot.html?id=${selectedBot.id}`;
+            } else {
+              alert('Invalid choice.');
+            }
           }
+        } catch (error) {
+          console.error('Error fetching bots:', error);
+          showNotification('Failed to fetch bots. Check console.', 'error');
         }
       }
     }
@@ -300,13 +314,17 @@
         return;
       }
 
+      const botData = { botName, username, code };
+      const url = currentBotId ? `/api/bots/${currentBotId}` : '/api/bots';
+      const method = currentBotId ? 'PUT' : 'POST';
+
       try {
         document.getElementById('save-btn').disabled = true;
         showNotification('Saving...', 'info');
-        const response = await fetch('/api/bots', {
-          method: 'POST',
+        const response = await fetch(url, {
+          method: method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ botName, username, code, id: currentBotId })
+          body: JSON.stringify(botData),
         });
         const result = await response.json();
         if (response.ok) {
@@ -314,11 +332,12 @@
           showNotification(`Bot ${currentBotId ? 'updated' : 'created'}! Saved as: ${botName}`, 'success');
           setTimeout(() => window.location.href = '/view-bots.html', 2000);
         } else {
+          console.error('Server error:', result);
           showNotification(`Error saving bot: ${result.error || 'Unknown error'}`, 'error');
         }
       } catch (error) {
-        console.error('Fetch error:', error);
-        showNotification('Failed to save bot. Check console.', 'error');
+        console.error('Fetch error:', error.message, { url, method, botData });
+        showNotification(`Failed to save bot: ${error.message}. Check console.`, 'error');
       } finally {
         document.getElementById('save-btn').disabled = false;
       }
@@ -379,10 +398,10 @@
     }
 
     function calculateRoundPoints(choice1, choice2) {
-      if (choice1 === 'steal' && choice2 === 'stay') return [8, 0]; // Increased by 4
-      if (choice1 === 'stay' && choice2 === 'steal') return [0, 8]; // Increased by 4
-      if (choice1 === 'stay' && choice2 === 'stay') return [4, 4];  // Increased by 4
-      return [0, 0]; // Both steal remains 0
+      if (choice1 === 'steal' && choice2 === 'stay') return [8, 0];
+      if (choice1 === 'stay' && choice2 === 'steal') return [0, 8];
+      if (choice1 === 'stay' && choice2 === 'stay') return [4, 4];
+      return [0, 0];
     }
 
     function interpretBotCode(code, opponentHistory, round) {
@@ -537,6 +556,9 @@
     fetchBot();
     updateLineNumbers();
     validateCode();
+
+    // Debug: Log when the page loads
+    console.log('create-edit-bot.html loaded successfully at:', window.location.href);
   </script>
 </body>
 </html>
